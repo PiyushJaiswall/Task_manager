@@ -11,8 +11,8 @@ from email.mime.text import MIMEText
 # ---------------------------
 # Streamlit Secrets
 # ---------------------------
-SUPABASE_URL = st.secrets.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuaWFtZG9jamdoZmR2cnlydnBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1NDExMzMsImV4cCI6MjA3NDExNzEzM30.ccIDteUEIyRCoLut63XSj1dnnjrEslEHggWtOIBS28c")
-SUPABASE_KEY = st.secrets.get("JQcbF830b/8URVqKe4wCkc0V3WGwklkxQj7kFEGpPJXNEswz5NzVzljSnCCxEpRUG/TKKXf/lh9rerbG8gdebQ==")
+SUPABASE_URL = st.secrets.get("SUPABASE_URL")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ---------------------------
