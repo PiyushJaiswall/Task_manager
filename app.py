@@ -43,6 +43,7 @@ summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 # Helper functions
 # -----------------------------
 def mock_transcription():
+    """Return a mock transcription for testing/demo purposes."""
     return "Mock transcription: Discussed Q4 targets, closed Acme deal at $50K."
 
 def generate_summary(text):
@@ -77,6 +78,9 @@ def fetch_user_notes(user_email):
 st.title("🛠️ BizExpress NoteForge")
 tab1, tab2, tab3 = st.tabs(["Take Notes", "Summaries & Prep", "Reminders"])
 
+# -----------------------------
+# Tab 1: Take Notes
+# -----------------------------
 with tab1:
     st.header("Join & Take Notes")
     platform = st.selectbox("Platform", ["Google Meet", "Microsoft Teams", "Zoom"])
@@ -84,14 +88,17 @@ with tab1:
     user_email = st.text_input("Your Email")
     if st.button("Join & Transcribe"):
         st.info("Simulating join... Transcribing.")
-        text = mock_transcription()
+        text = mock_transcription()  # Mock transcription instead of real audio
         save_note(text, "raw_notes", user_email)
         summary = generate_summary(text)
         st.success(f"Notes saved: {summary}")
 
+# -----------------------------
+# Tab 2: Summaries & Prep
+# -----------------------------
 with tab2:
     st.header("Generate Outputs")
-    user_email = st.text_input("Your Email to fetch notes for summaries")
+    user_email = st.text_input("Your Email to fetch notes for summaries", key="summary_email")
     notes = fetch_user_notes(user_email) if user_email else []
     if notes:
         note_ids = [note["id"] for note in notes]
@@ -108,6 +115,9 @@ with tab2:
     else:
         st.info("No notes found for this email.")
 
+# -----------------------------
+# Tab 3: Reminders
+# -----------------------------
 with tab3:
     st.header("Set Reminders")
     event_desc = st.text_area("Event Description")
@@ -118,6 +128,9 @@ with tab3:
         schedule_reminder(reminder_time.strftime("%H:%M"), reminder_text, email)
         st.success("Reminder scheduled!")
 
+# -----------------------------
+# Background Scheduler
+# -----------------------------
 if st.button("Start Reminder Engine"):
     st.info("Reminder engine running in background (Press Stop to end).")
     while True:
