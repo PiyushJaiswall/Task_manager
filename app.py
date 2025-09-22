@@ -7,7 +7,6 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
-import config
 
 # Summarizer
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
@@ -87,3 +86,4 @@ if st.button("Start Reminder Engine"):
     while True:
         schedule.run_pending()
         time.sleep(60)
+
