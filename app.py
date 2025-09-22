@@ -3,10 +3,17 @@ import speech_recognition as sr
 from transformers import pipeline
 import schedule
 import time
-import sqlite3
+from datetime import datetime
+from supabase import create_client
 import smtplib
 from email.mime.text import MIMEText
-from datetime import datetime
+
+# ---------------------------
+# Streamlit Secrets
+# ---------------------------
+SUPABASE_URL = st.secrets.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuaWFtZG9jamdoZmR2cnlydnBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1NDExMzMsImV4cCI6MjA3NDExNzEzM30.ccIDteUEIyRCoLut63XSj1dnnjrEslEHggWtOIBS28c")
+SUPABASE_KEY = st.secrets.get("JQcbF830b/8URVqKe4wCkc0V3WGwklkxQj7kFEGpPJXNEswz5NzVzljSnCCxEpRUG/TKKXf/lh9rerbG8gdebQ==")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ---------------------------
 # Summarizer
@@ -14,12 +21,26 @@ from datetime import datetime
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
 # ---------------------------
-# DB Setup
+# Credentials Input Sidebar
 # ---------------------------
-conn = sqlite3.connect('bizexpress_notes.db', check_same_thread=False)
-c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, timestamp TEXT, content TEXT, type TEXT)''')
-conn.commit()
+st.sidebar.header("🔐 Credentials & API Keys")
+
+if "credentials_set" not in st.session_state:
+    st.session_state["EMAIL_FROM"] = st.sidebar.text_input("Email From")
+    st.session_state["EMAIL_PASSWORD"] = st.sidebar.text_input("Email Password (App Password)", type="password")
+    st.session_state["GOOGLE_CLIENT_ID"] = st.sidebar.text_input("Google Client ID")
+    st.session_state["GOOGLE_CLIENT_SECRET"] = st.sidebar.text_input("Google Client Secret")
+    st.session_state["MS_TENANT_ID"] = st.sidebar.text_input("Microsoft Tenant ID")
+    st.session_state["MS_CLIENT_ID"] = st.sidebar.text_input("Microsoft Client ID")
+    st.session_state["MS_CLIENT_SECRET"] = st.sidebar.text_input("Microsoft Client Secret")
+    st.session_state["ZOOM_API_KEY"] = st.sidebar.text_input("Zoom API Key")
+    st.session_state["ZOOM_API_SECRET"] = st.sidebar.text_input("Zoom API Secret")
+    
+    if st.sidebar.button("Save Credentials"):
+        st.session_state["credentials_set"] = True
+        st.success("Credentials saved for this session!")
+else:
+    st.sidebar.success("Credentials are set!")
 
 # ---------------------------
 # Functions
@@ -39,9 +60,9 @@ def generate_summary(text):
 def send_email(to_email, subject, body):
     EMAIL_FROM = st.session_state.get("EMAIL_FROM")
     EMAIL_PASSWORD = st.session_state.get("EMAIL_PASSWORD")
-
+    
     if not EMAIL_FROM or not EMAIL_PASSWORD:
-        st.error("Please set your email credentials in the Credentials tab first.")
+        st.error("Please set your email credentials in the sidebar first.")
         return
 
     msg = MIMEText(body)
@@ -62,28 +83,26 @@ def schedule_reminder(event_time, reminder_text, email):
         send_email(email, "BizExpress Reminder", reminder_text)
     schedule.every().day.at(event_time).do(job)
 
+def save_note_to_supabase(user_email, text, note_type="raw_notes"):
+    supabase.table("notes").insert({
+        "user_email": user_email,
+        "timestamp": datetime.now().isoformat(),
+        "content": text,
+        "type": note_type
+    }).execute()
+
+def fetch_user_notes(user_email):
+    data = supabase.table("notes").select("*").eq("user_email", user_email).execute()
+    return data.data if data.data else []
+
 # ---------------------------
-# Streamlit UI
+# Main UI
 # ---------------------------
 st.title("🛠️ BizExpress NoteForge")
 
-# ---------------------------
-# Credentials input
-# ---------------------------
-st.sidebar.header("Credentials (Email/API)")
-if "credentials_set" not in st.session_state:
-    st.session_state["EMAIL_FROM"] = st.sidebar.text_input("Email From")
-    st.session_state["EMAIL_PASSWORD"] = st.sidebar.text_input("Email Password (app password)", type="password")
-    if st.sidebar.button("Save Credentials"):
-        st.session_state["credentials_set"] = True
-        st.success("Credentials saved for this session!")
-else:
-    st.sidebar.success("Credentials are set!")
-
-# ---------------------------
-# Tabs
-# ---------------------------
 tab1, tab2, tab3 = st.tabs(["Take Notes", "Summaries & Prep", "Reminders"])
+
+user_email = st.session_state.get("EMAIL_FROM", "guest@example.com")
 
 # ---------------------------
 # Tab 1: Take Notes
@@ -95,25 +114,29 @@ with tab1:
         st.info("Simulating join... Transcribing.")
         text = transcribe_audio("mock_audio.wav")
         summary = generate_summary(text)
-        c.execute("INSERT INTO notes VALUES (NULL, ?, ?, ?)", (datetime.now().isoformat(), text, "raw_notes"))
-        conn.commit()
+        save_note_to_supabase(user_email, text)
         st.success(f"Notes saved: {summary}")
 
 # ---------------------------
 # Tab 2: Summaries & Prep
 # ---------------------------
 with tab2:
-    note_id = st.number_input("Note ID from DB", min_value=1)
-    c.execute("SELECT content FROM notes WHERE id=?", (note_id,))
-    row = c.fetchone()
-    raw_text = row[0] if row else "No notes found."
-    if st.button("Create Summary"):
-        summary = generate_summary(raw_text)
-        st.write("**Summary:**", summary)
-        send_email("user@bizexpress.com", "Meeting Summary", summary)
-    if st.button("Create Prep Notes"):
-        prep = generate_summary("Generate prep notes: " + raw_text)
-        st.write("**Prep Notes:**", prep)
+    notes = fetch_user_notes(user_email)
+    if notes:
+        note_options = {f"{n['timestamp']}": n['content'] for n in notes}
+        selected_time = st.selectbox("Select Note by Timestamp", list(note_options.keys()))
+        raw_text = note_options[selected_time]
+
+        if st.button("Create Summary"):
+            summary = generate_summary(raw_text)
+            st.write("**Summary:**", summary)
+            send_email(user_email, "Meeting Summary", summary)
+
+        if st.button("Create Prep Notes"):
+            prep = generate_summary("Generate prep notes: " + raw_text)
+            st.write("**Prep Notes:**", prep)
+    else:
+        st.info("No notes found yet. Take notes first in Tab 1.")
 
 # ---------------------------
 # Tab 3: Reminders
@@ -121,14 +144,14 @@ with tab2:
 with tab3:
     event_desc = st.text_area("Event Description")
     reminder_time = st.time_input("Reminder Time")
-    email = st.text_input("Send to Email")
+    email_to = st.text_input("Send to Email")
     if st.button("Schedule"):
         reminder_text = f"Follow-up: {event_desc}"
-        schedule_reminder(reminder_time.strftime("%H:%M"), reminder_text, email)
+        schedule_reminder(reminder_time.strftime("%H:%M"), reminder_text, email_to)
         st.success("Reminder scheduled!")
 
 # ---------------------------
-# Background scheduler
+# Reminder Engine
 # ---------------------------
 if st.button("Start Reminder Engine"):
     while True:
