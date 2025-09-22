@@ -14,7 +14,11 @@ from email.mime.text import MIMEText
 SUPABASE_URL = st.secrets.get("SUPABASE_URL")
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
+try:
+    test = supabase.table("notes").select("*").limit(1).execute()
+    st.write("Connected to Supabase!", test)
+except Exception as e:
+    st.error(f"Supabase connection failed: {e}")
 # ---------------------------
 # Summarizer
 # ---------------------------
@@ -157,3 +161,4 @@ if st.button("Start Reminder Engine"):
     while True:
         schedule.run_pending()
         time.sleep(60)
+
