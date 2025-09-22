@@ -112,7 +112,7 @@ with tab1:
     meeting_link = st.text_input("Meeting Link/ID")
     if st.button("Join & Transcribe"):
         st.info("Simulating join... Transcribing.")
-        text = transcribe_audio("mock_audio.wav")
+        text = transcribe_audio("fixed_audio.wav")
         summary = generate_summary(text)
         save_note_to_supabase(user_email, text)
         st.success(f"Notes saved: {summary}")
@@ -157,5 +157,6 @@ if st.button("Start Reminder Engine"):
     while True:
         schedule.run_pending()
         time.sleep(60)
+
 
 
