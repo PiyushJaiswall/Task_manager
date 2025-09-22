@@ -9,5 +9,6 @@ google-auth-oauthlib
 google-auth-httplib2
 msgraph-sdk
 zoomus
-supabase-py
+supabase
+
 
