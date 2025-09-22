@@ -1,0 +1,11 @@
+streamlit
+speechrecognition
+vosk
+transformers
+torch
+schedule
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+msgraph-sdk
+zoomus
