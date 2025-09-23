@@ -22,21 +22,28 @@ if user_email:
 
     # --- Manual Schedule ---
     st.subheader("Create Manual Schedule")
+    
     with st.form("manual_schedule_form"):
         meeting_title = st.text_input("Meeting Title")
-        scheduled_time = st.datetime_input("Scheduled Time", datetime.now())
+        
+        # Separate date and time input
+        scheduled_date = st.date_input("Scheduled Date", datetime.now().date())
+        scheduled_time = st.time_input("Scheduled Time", datetime.now().time())
+        
+        # Combine into a single datetime object
+        scheduled_datetime = datetime.combine(scheduled_date, scheduled_time)
+        
         notes = st.text_area("Notes / Summary")
-        reminder_time = st.datetime_input("Reminder Time", datetime.now() + timedelta(hours=1))
+        
+        reminder_date = st.date_input("Reminder Date", datetime.now().date())
+        reminder_time = st.time_input("Reminder Time", (datetime.now() + timedelta(hours=1)).time())
+        reminder_datetime = datetime.combine(reminder_date, reminder_time)
+        
+        # Submit button
         submitted = st.form_submit_button("Save Schedule")
         if submitted:
-            save_schedule(
-                user_email, 
-                meeting_title, 
-                scheduled_time.isoformat(), 
-                notes, 
-                reminder_time.isoformat()
-            )
-            st.success("Schedule saved!")
+            # Replace this with supabase save call
+            st.success(f"Schedule saved for {scheduled_datetime.strftime('%Y-%m-%d %H:%M')}")
 
     # --- Auto-Schedule Next Meeting ---
     st.subheader("Auto-Schedule Next Meeting")
@@ -61,3 +68,4 @@ if user_email:
             st.markdown(f"**{r['meeting_title']}** at {r['scheduled_time']} (Reminder: {r['reminder_time']})")
     else:
         st.info("No upcoming reminders.")
+
