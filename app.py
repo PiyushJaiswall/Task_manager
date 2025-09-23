@@ -1,71 +1,73 @@
 import streamlit as st
-from supabase_client import fetch_transcripts, save_schedule, fetch_upcoming_reminders
 from datetime import datetime, timedelta
+from supabase_client import fetch_transcripts, save_schedule, fetch_upcoming_reminders
 
-st.set_page_config(page_title="BizExpress Meetings", layout="wide")
+st.set_page_config(page_title="BizExpress Meeting Dashboard", layout="wide")
 st.title("BizExpress Meeting Dashboard")
 
-# User login/email
-user_email = st.text_input("Enter your email", "")
+# --- Login Form ---
+with st.form("login_form"):
+    user_email = st.text_input("Email")
+    user_password = st.text_input("Password", type="password")
+    submitted = st.form_submit_button("Login")
 
-if user_email:
-    # --- Display Meeting Summaries ---
-    st.subheader("Meeting Summaries")
-    transcripts = fetch_transcripts(user_email)
-    if transcripts:
-        for t in transcripts:
-            st.markdown(f"**{t['meeting_name']}** ({t['start_time']} - {t['end_time']})")
-            st.markdown(f"{t['transcript_text'][:300]}...")  # show first 300 chars
-            st.markdown("---")
+if submitted:
+    if not user_email or not user_password:
+        st.error("Please enter both email and password")
     else:
-        st.info("No transcripts available.")
+        st.success(f"Logged in as {user_email}")
 
-    # --- Manual Schedule ---
-    st.subheader("Create Manual Schedule")
-    
-    with st.form("manual_schedule_form"):
-        meeting_title = st.text_input("Meeting Title")
-        
-        # Separate date and time input
-        scheduled_date = st.date_input("Scheduled Date", datetime.now().date())
-        scheduled_time = st.time_input("Scheduled Time", datetime.now().time())
-        
-        # Combine into a single datetime object
-        scheduled_datetime = datetime.combine(scheduled_date, scheduled_time)
-        
-        notes = st.text_area("Notes / Summary")
-        
-        reminder_date = st.date_input("Reminder Date", datetime.now().date())
-        reminder_time = st.time_input("Reminder Time", (datetime.now() + timedelta(hours=1)).time())
-        reminder_datetime = datetime.combine(reminder_date, reminder_time)
-        
-        # Submit button
-        submitted = st.form_submit_button("Save Schedule")
-        if submitted:
-            # Replace this with supabase save call
-            st.success(f"Schedule saved for {scheduled_datetime.strftime('%Y-%m-%d %H:%M')}")
+        # --- Display Meeting Summaries ---
+        st.header("Meeting Summaries")
+        transcripts = fetch_transcripts(user_email)
+        if transcripts:
+            for t in transcripts:
+                st.markdown(f"**Title:** {t.get('meeting_title')}")
+                st.markdown(f"**Summary:** {t.get('summary')}")
+                st.markdown(f"**Start Time:** {t.get('start_time')}")
+                st.markdown("---")
+        else:
+            st.info("No transcripts available.")
 
-    # --- Auto-Schedule Next Meeting ---
-    st.subheader("Auto-Schedule Next Meeting")
-    if transcripts:
-        last_meeting = transcripts[0]
-        next_time = datetime.fromisoformat(last_meeting['end_time']) + timedelta(days=1)
-        st.markdown(f"Suggested Next Meeting: {next_time.strftime('%Y-%m-%d %H:%M')}")
-        if st.button("Save Auto-Schedule"):
-            save_schedule(
-                user_email,
-                f"Follow-up: {last_meeting['meeting_name']}",
-                next_time.isoformat(),
-                last_meeting['transcript_text']
-            )
-            st.success("Auto-schedule saved!")
+        # --- Auto-Schedule Next Meeting ---
+        st.header("Auto-Schedule Next Meeting")
+        last_summary = transcripts[0]['summary'] if transcripts else ""
+        suggested_title = f"Follow-up: {last_summary[:30]}..." if last_summary else ""
+        suggested_time = datetime.now() + timedelta(days=7)  # Default 7 days later
 
-    # --- Reminders ---
-    st.subheader("Upcoming Reminders")
-    reminders = fetch_upcoming_reminders(user_email)
-    if reminders:
-        for r in reminders:
-            st.markdown(f"**{r['meeting_title']}** at {r['scheduled_time']} (Reminder: {r['reminder_time']})")
-    else:
-        st.info("No upcoming reminders.")
+        with st.form("auto_schedule_form"):
+            auto_meeting_title = st.text_input("Next Meeting Title", value=suggested_title)
+            auto_scheduled_time = st.datetime_input("Scheduled Time", value=suggested_time)
+            auto_notes = st.text_area("Notes", value=last_summary)
+            auto_submitted = st.form_submit_button("Save Auto-Schedule")
 
+            if auto_submitted:
+                save_schedule(user_email, auto_meeting_title, auto_scheduled_time.isoformat(), auto_notes)
+                st.success("Auto-scheduled meeting saved!")
+
+        # --- Manual Schedule Creation ---
+        st.header("Create Manual Schedule")
+        with st.form("manual_schedule_form"):
+            manual_title = st.text_input("Meeting Title")
+            manual_time = st.datetime_input("Scheduled Time", value=datetime.now())
+            manual_notes = st.text_area("Notes")
+            manual_submitted = st.form_submit_button("Save Manual Schedule")
+
+            if manual_submitted:
+                save_schedule(user_email, manual_title, manual_time.isoformat(), manual_notes)
+                st.success("Manual schedule saved!")
+
+        # --- Upcoming Reminders ---
+        st.header("Upcoming Reminders")
+        try:
+            reminders = fetch_upcoming_reminders(user_email)
+            if reminders:
+                for r in reminders:
+                    st.markdown(f"**Title:** {r.get('meeting_title')}")
+                    st.markdown(f"**Scheduled Time:** {r.get('scheduled_time')}")
+                    st.markdown(f"**Reminder Time:** {r.get('reminder_time')}")
+                    st.markdown("---")
+            else:
+                st.info("No upcoming reminders.")
+        except Exception as e:
+            st.error(f"Error fetching reminders: {e}")
