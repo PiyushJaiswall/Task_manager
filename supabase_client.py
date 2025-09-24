@@ -9,19 +9,15 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# --- Authentication ---
 def sign_in(email: str, password: str):
     try:
-        user = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
-        if user.user:
-            return True
-        else:
-            return False
+        user = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        return user.user is not None
     except Exception as e:
         print(f"Login error: {e}")
         return False
+
 # --- Fetch meeting transcripts ---
 def fetch_transcripts(user_email: str):
     try:
@@ -68,6 +64,7 @@ def fetch_upcoming_reminders(user_email: str):
         print(f"Error fetching reminders: {e}")
         return []
 
+# --- Delete functions ---
 def delete_transcript(transcript_id: int):
     try:
         supabase.table("meeting_transcripts").delete().eq("id", transcript_id).execute()
@@ -79,5 +76,3 @@ def delete_schedule(schedule_id: int):
         supabase.table("meeting_schedules").delete().eq("id", schedule_id).execute()
     except Exception as e:
         print(f"Error deleting schedule: {e}")
-
-
