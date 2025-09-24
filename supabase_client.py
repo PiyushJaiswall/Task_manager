@@ -18,6 +18,14 @@ def sign_in(email: str, password: str):
         print(f"Login error: {e}")
         return False
 
+def sign_up(email: str, password: str):
+    try:
+        user = supabase.auth.sign_up({"email": email, "password": password})
+        return user.user is not None
+    except Exception as e:
+        print(f"Signup error: {e}")
+        return False
+        
 # --- Fetch meeting transcripts ---
 def fetch_transcripts(user_email: str):
     try:
@@ -76,3 +84,4 @@ def delete_schedule(schedule_id: int):
         supabase.table("meeting_schedules").delete().eq("id", schedule_id).execute()
     except Exception as e:
         print(f"Error deleting schedule: {e}")
+
