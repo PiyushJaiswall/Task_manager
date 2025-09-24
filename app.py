@@ -5,31 +5,53 @@ from supabase_client import fetch_transcripts, save_schedule, fetch_upcoming_rem
 st.set_page_config(page_title="BizExpress Dashboard", layout="wide")
 st.title("BizExpress Meeting Dashboard")
 
-# ---------------------
-# Login Form
-# ---------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    with st.form("login_form"):
-        user_email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        login_submitted = st.form_submit_button("Login")
+    auth_tab = st.tabs(["Login", "Sign Up"])
+    
+    # ---------------------
+    # LOGIN FORM
+    # ---------------------
+    with auth_tab[0]:
+        with st.form("login_form"):
+            user_email = st.text_input("Email", key="login_email")
+            password = st.text_input("Password", type="password", key="login_password")
+            login_submitted = st.form_submit_button("Login")
 
-    if login_submitted:
-        if not user_email or not password:
-            st.error("Please enter both email and password.")
-        else:
-            if sign_in(user_email, password):
-                st.success(f"Logged in as {user_email}")
-                st.session_state.logged_in = True
-                st.session_state.user_email = user_email
-                st.experimental_rerun()
+        if login_submitted:
+            if not user_email or not password:
+                st.error("Please enter both email and password.")
             else:
-                st.error("Invalid email or password")
+                if sign_in(user_email, password):
+                    st.success(f"Logged in as {user_email}")
+                    st.session_state.logged_in = True
+                    st.session_state.user_email = user_email
+                    st.experimental_rerun()
+                else:
+                    st.error("Invalid email or password")
+
+    # ---------------------
+    # SIGNUP FORM
+    # ---------------------
+    with auth_tab[1]:
+        with st.form("signup_form"):
+            new_email = st.text_input("Email", key="signup_email")
+            new_password = st.text_input("Password", type="password", key="signup_password")
+            signup_submitted = st.form_submit_button("Sign Up")
+
+        if signup_submitted:
+            if not new_email or not new_password:
+                st.error("Please enter both email and password.")
+            else:
+                if sign_up(new_email, new_password):
+                    st.success("Signup successful! You can now login.")
+                else:
+                    st.error("Signup failed. Email might already be in use.")
 else:
     user_email = st.session_state.user_email
+
 
     # ---------------------
     # Tabs for dashboard
@@ -123,3 +145,4 @@ else:
                     st.experimental_rerun()
         else:
             st.info("No scheduled reminders.")
+
