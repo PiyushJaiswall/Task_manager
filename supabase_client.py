@@ -54,3 +54,16 @@ def fetch_upcoming_reminders(user_email: str):
     except Exception as e:
         print(f"Error fetching reminders: {e}")
         return []
+
+def delete_transcript(transcript_id: int):
+    try:
+        supabase.table("meeting_transcripts").delete().eq("id", transcript_id).execute()
+    except Exception as e:
+        print(f"Error deleting transcript: {e}")
+
+def delete_schedule(schedule_id: int):
+    try:
+        supabase.table("meeting_schedules").delete().eq("id", schedule_id).execute()
+    except Exception as e:
+        print(f"Error deleting schedule: {e}")
+
