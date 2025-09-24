@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import datetime
 from supabase_client import fetch_transcripts, save_schedule, fetch_upcoming_reminders, delete_transcript, delete_schedule
 from supabase import create_client
+from supabase_client import sign_in
 
 st.set_page_config(page_title="BizExpress Dashboard", layout="wide")
 
@@ -12,14 +13,20 @@ st.title("BizExpress Meeting Dashboard")
 
 with st.form("login_form"):
     user_email = st.text_input("Email")
-    password = st.text_input("Password", type="password")  # Currently placeholder
+    password = st.text_input("Password", type="password")
     login_submitted = st.form_submit_button("Login")
 
 if login_submitted:
     if not user_email or not password:
         st.error("Please enter both email and password.")
     else:
-        st.success(f"Logged in as {user_email}")
+        # Authenticate with Supabase
+        authenticated = sign_in(user_email, password)
+        if authenticated:
+            st.success(f"Logged in as {user_email}")
+            # proceed to dashboard tabs here...
+        else:
+            st.error("Invalid email or password")
 
         # ---------------------
         # Tabs for different sections
@@ -122,3 +129,4 @@ if login_submitted:
                     st.info("No scheduled reminders.")
             except:
                 st.error("Error fetching scheduled reminders.")
+
