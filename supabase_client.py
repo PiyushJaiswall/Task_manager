@@ -2,6 +2,8 @@
 from supabase import create_client, Client
 import os
 from datetime import datetime
+import io
+import csv
 
 # --- Supabase credentials from environment variables ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -25,8 +27,8 @@ def sign_up(email: str, password: str):
     except Exception as e:
         print(f"Signup error: {e}")
         return False
-        
-# --- Fetch meeting transcripts ---
+
+# --- Fetch meeting transcripts (your existing function) ---
 def fetch_transcripts(user_email: str):
     try:
         response = supabase.table("meeting_transcripts")\
@@ -39,7 +41,7 @@ def fetch_transcripts(user_email: str):
         print(f"Error fetching transcripts: {e}")
         return []
 
-# --- Save schedule (manual or auto) ---
+# --- Save schedule (your existing function) ---
 def save_schedule(user_email: str, meeting_title: str, scheduled_time: str, notes: str = "", reminder_time: str = None):
     data = {
         "user_email": user_email,
@@ -56,7 +58,7 @@ def save_schedule(user_email: str, meeting_title: str, scheduled_time: str, note
         print(f"Error saving schedule: {e}")
         return []
 
-# --- Fetch upcoming reminders ---
+# --- Fetch upcoming reminders (your existing function) ---
 def fetch_upcoming_reminders(user_email: str):
     now = datetime.utcnow().isoformat()
     try:
@@ -72,7 +74,7 @@ def fetch_upcoming_reminders(user_email: str):
         print(f"Error fetching reminders: {e}")
         return []
 
-# --- Delete functions ---
+# --- Delete functions (your existing functions) ---
 def delete_transcript(transcript_id: int):
     try:
         supabase.table("meeting_transcripts").delete().eq("id", transcript_id).execute()
@@ -84,6 +86,8 @@ def delete_schedule(schedule_id: int):
         supabase.table("meeting_schedules").delete().eq("id", schedule_id).execute()
     except Exception as e:
         print(f"Error deleting schedule: {e}")
+
+# === NEW FUNCTIONS FOR MEETING TRANSCRIPT MANAGER ===
 
 # --- Meeting and Transcript Management Functions ---
 
@@ -110,6 +114,28 @@ def fetch_meeting_by_id(meeting_id: str):
     except Exception as e:
         print(f"Error fetching meeting: {e}")
         return None
+
+def create_new_meeting(title: str, summary: str, key_points: list, followup_points: list, next_meet_schedule: str = None, transcript_id: str = None):
+    """Create a new meeting record - NEW FUNCTION for manual meeting creation"""
+    try:
+        new_meeting_data = {
+            "title": title,
+            "summary": summary,
+            "key_points": key_points,
+            "followup_points": followup_points
+        }
+
+        if next_meet_schedule:
+            new_meeting_data["next_meet_schedule"] = next_meet_schedule
+
+        if transcript_id:
+            new_meeting_data["transcript_id"] = transcript_id
+
+        response = supabase.table("meetings").insert(new_meeting_data).execute()
+        return True
+    except Exception as e:
+        print(f"Error creating meeting: {e}")
+        return False
 
 def update_meeting(meeting_id: str, title: str, summary: str, key_points: list, followup_points: list, next_meet_schedule: str = None):
     """Update a meeting record"""
@@ -213,15 +239,12 @@ def export_meetings_csv(start_date: str, end_date: str):
             return None
 
         # Convert to CSV format
-        import io
-        import csv
-
         output = io.StringIO()
         writer = csv.writer(output)
 
         # Write headers
         headers = ["ID", "Title", "Summary", "Key Points", "Followup Points", 
-                  "Next Meeting", "Created At", "Updated At", "Original Meeting Title"]
+                  "Next Meeting", "Created At", "Updated At", "Original Meeting Title", "Source Type"]
         writer.writerow(headers)
 
         # Write data
@@ -229,8 +252,11 @@ def export_meetings_csv(start_date: str, end_date: str):
             key_points_str = "; ".join(meeting.get("key_points") or [])
             followup_str = "; ".join(meeting.get("followup_points") or [])
             original_title = ""
+            source_type = "Manual Entry"
+
             if meeting.get("transcripts"):
                 original_title = meeting["transcripts"].get("meeting_title", "")
+                source_type = "From Transcript"
 
             writer.writerow([
                 meeting.get("id", ""),
@@ -241,7 +267,8 @@ def export_meetings_csv(start_date: str, end_date: str):
                 meeting.get("next_meet_schedule", ""),
                 meeting.get("created_at", ""),
                 meeting.get("updated_at", ""),
-                original_title
+                original_title,
+                source_type
             ])
 
         return output.getvalue()
