@@ -15,66 +15,192 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# Enhanced CSS for better styling and dark theme compatibility
 st.markdown("""
 <style>
+    /* Dark theme compatible meeting cards */
     .meeting-card {
-        background: white;
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
         padding: 1.5rem;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .new-meeting-card {
-        background: #f0f8ff;
-        padding: 1.5rem;
-        border-radius: 10px;
-        border: 2px solid #4CAF50;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .meeting-title {
-        color: #1f1f1f;
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    .meeting-meta {
-        color: #666;
-        font-size: 0.9rem;
-        margin-bottom: 1rem;
-    }
-    .stButton > button {
-        width: 100%;
-    }
-    .stats-card {
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        border: 1px solid #e9ecef;
-    }
-    /* Fix for table movement */
-    .dataframe {
+        border-radius: 12px;
+        border: 1px solid #4a5568;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         position: relative;
     }
-    div[data-testid="metric-container"] {
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        padding: 1rem;
-        border-radius: 8px;
+
+    .meeting-card:hover {
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
     }
+
+    /* New meeting form card */
+    .new-meeting-card {
+        background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        border: 2px solid #3182ce;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Meeting title styling */
+    .meeting-title {
+        color: #e2e8f0 !important;
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 0.8rem;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
+    /* Meeting metadata */
+    .meeting-meta {
+        color: #a0aec0 !important;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        font-style: italic;
+    }
+
+    /* Edit mode indicator */
+    .edit-mode-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #48bb78;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+
+    .view-mode-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #4299e1;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+
+    /* Read-only field styling */
+    .readonly-field {
+        background: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #4a5568 !important;
+        padding: 0.5rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .readonly-textarea {
+        background: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #4a5568 !important;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        min-height: 80px;
+        white-space: pre-wrap;
+        font-family: inherit;
+        line-height: 1.4;
+    }
+
+    /* Button styling */
+    .stButton > button {
+        width: 100%;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    /* Edit button specific styling */
+    .edit-btn {
+        background: linear-gradient(90deg, #4299e1 0%, #3182ce 100%) !important;
+        color: white !important;
+        border: none !important;
+    }
+
+    .save-btn {
+        background: linear-gradient(90deg, #48bb78 0%, #38a169 100%) !important;
+        color: white !important;
+        border: none !important;
+    }
+
+    .cancel-btn {
+        background: linear-gradient(90deg, #f56565 0%, #e53e3e 100%) !important;
+        color: white !important;
+        border: none !important;
+    }
+
+    /* Stats card styling */
+    .stats-card {
+        background: #2d3748;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid #4a5568;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Add meeting header */
     .add-meeting-header {
-        color: #2E7D32;
+        color: #63b3ed !important;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
+    /* Section headers */
+    .section-header {
+        color: #e2e8f0 !important;
         font-size: 1.1rem;
         font-weight: 600;
         margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #4a5568;
+    }
+
+    /* Fix Streamlit's default white backgrounds in dark mode */
+    .stTextInput > div > div > input {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border-color: #4a5568 !important;
+    }
+
+    .stTextArea > div > div > textarea {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border-color: #4a5568 !important;
+    }
+
+    .stSelectbox > div > div > div {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* Remove excessive white space */
+    .element-container {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Card container fix */
+    .meeting-card-container {
+        background: none !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state for caching
+# Initialize session state for caching and edit modes
 if 'stats_cache' not in st.session_state:
     st.session_state.stats_cache = None
 if 'meetings_cache' not in st.session_state:
@@ -83,6 +209,8 @@ if 'cache_timestamp' not in st.session_state:
     st.session_state.cache_timestamp = None
 if 'show_add_form' not in st.session_state:
     st.session_state.show_add_form = False
+if 'edit_modes' not in st.session_state:
+    st.session_state.edit_modes = {}  # Track edit mode for each meeting
 
 # Simplified functions that work directly with supabase
 @st.cache_data(ttl=30)  # Cache for 30 seconds
@@ -199,7 +327,7 @@ def meet_details_tab():
     # Add New Meeting Section
     col_header, col_toggle = st.columns([3, 1])
     with col_header:
-        st.subheader("➕ Add New Meeting")
+        st.markdown('<div class="section-header">➕ Add New Meeting</div>', unsafe_allow_html=True)
     with col_toggle:
         if st.button("📝 Add Manual Meeting" if not st.session_state.show_add_form else "❌ Cancel"):
             st.session_state.show_add_form = not st.session_state.show_add_form
@@ -212,7 +340,7 @@ def meet_details_tab():
     st.markdown("---")
 
     # Search and filter section for existing meetings
-    st.subheader("📋 Existing Meetings")
+    st.markdown('<div class="section-header">📋 Existing Meetings</div>', unsafe_allow_html=True)
     col1, col2, col3 = st.columns([2, 1, 1])
 
     with col1:
@@ -387,10 +515,20 @@ def create_manual_meeting(title, summary, key_points, followup_points, next_date
         st.error(f"Error creating meeting: {str(e)}")
 
 def display_meeting_card(meeting):
+    meeting_id = meeting['id']
+    is_edit_mode = st.session_state.edit_modes.get(meeting_id, False)
+
     with st.container():
+        st.markdown('<div class="meeting-card-container">', unsafe_allow_html=True)
         st.markdown('<div class="meeting-card">', unsafe_allow_html=True)
 
-        # Meeting title with indicator for manual vs transcript-based
+        # Edit mode indicator
+        if is_edit_mode:
+            st.markdown('<div class="edit-mode-indicator">✏️ EDITING</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="view-mode-indicator">👁️ VIEW</div>', unsafe_allow_html=True)
+
+        # Meeting title with better contrast
         title = meeting.get("title", "Untitled Meeting")
         if not meeting.get('transcript_id'):
             title_display = f"📝 {title}"  # Manual meeting indicator
@@ -419,67 +557,126 @@ def display_meeting_card(meeting):
         st.markdown(f'<div class="meeting-meta">Source: {source_type} | Created: {created_str} | Updated: {updated_str}</div>', 
                    unsafe_allow_html=True)
 
-        # Create form for editing
-        with st.form(key=f"meeting_form_{meeting['id']}"):
+        # Edit/View toggle buttons at top of card
+        col_edit, col_transcript, col_spacer = st.columns([1, 1, 2])
+
+        with col_edit:
+            if is_edit_mode:
+                if st.button("❌ Cancel", key=f"cancel_{meeting_id}", help="Cancel editing"):
+                    st.session_state.edit_modes[meeting_id] = False
+                    st.rerun()
+            else:
+                if st.button("✏️ Edit", key=f"edit_{meeting_id}", help="Enable editing"):
+                    st.session_state.edit_modes[meeting_id] = True
+                    st.rerun()
+
+        with col_transcript:
+            # Only show transcript download for meetings that have transcripts
+            if meeting.get('transcript_id'):
+                if st.button("📄 Transcript", key=f"transcript_{meeting_id}", help="Download transcript"):
+                    download_transcript(meeting.get('transcript_id'))
+            else:
+                st.markdown('<div style="text-align: center; color: #a0aec0; font-size: 0.8rem; padding: 6px;">📝 Manual Entry</div>', 
+                           unsafe_allow_html=True)
+
+        # Main content area
+        if is_edit_mode:
+            # Edit mode - show editable form
+            with st.form(key=f"meeting_edit_form_{meeting_id}"):
+                col1, col2 = st.columns([2, 1])
+
+                with col1:
+                    # Editable fields
+                    new_title = st.text_input("Title", value=meeting.get('title', ''), key=f"edit_title_{meeting_id}")
+
+                    new_summary = st.text_area("Summary", value=meeting.get('summary', ''), 
+                                             height=100, key=f"edit_summary_{meeting_id}")
+
+                    # Key points - convert array to comma-separated string
+                    key_points_str = ', '.join(meeting.get('key_points', []) or [])
+                    new_key_points = st.text_area("Key Points (comma/semicolon separated)", 
+                                                value=key_points_str, key=f"edit_key_points_{meeting_id}")
+
+                    # Follow-up points
+                    followup_points_str = ', '.join(meeting.get('followup_points', []) or [])
+                    new_followup_points = st.text_area("Follow-up Points (comma/semicolon separated)", 
+                                                     value=followup_points_str, key=f"edit_followup_{meeting_id}")
+
+                with col2:
+                    # Next meeting schedule
+                    next_meet = meeting.get('next_meet_schedule')
+                    if next_meet:
+                        next_meet_date = datetime.fromisoformat(next_meet.replace('Z', '+00:00')).date()
+                        next_meet_time = datetime.fromisoformat(next_meet.replace('Z', '+00:00')).time()
+                    else:
+                        next_meet_date = None
+                        next_meet_time = None
+
+                    new_next_date = st.date_input("Next Meeting Date", value=next_meet_date, 
+                                                key=f"edit_next_date_{meeting_id}")
+                    new_next_time = st.time_input("Next Meeting Time", value=next_meet_time, 
+                                                key=f"edit_next_time_{meeting_id}")
+
+                # Save button
+                save_clicked = st.form_submit_button("💾 Save Changes", use_container_width=True, type="primary")
+
+                # Handle form submission
+                if save_clicked:
+                    success = save_meeting_changes(
+                        meeting_id,
+                        new_title,
+                        new_summary,
+                        new_key_points,
+                        new_followup_points,
+                        new_next_date,
+                        new_next_time
+                    )
+                    if success:
+                        st.session_state.edit_modes[meeting_id] = False
+                        st.rerun()
+
+        else:
+            # View mode - show read-only content
             col1, col2 = st.columns([2, 1])
 
             with col1:
-                # Editable fields
-                new_title = st.text_input("Title", value=meeting.get('title', ''), key=f"title_{meeting['id']}")
+                # Read-only title
+                st.write("**Title:**")
+                st.markdown(f'<div class="readonly-field">{meeting.get("title", "Untitled")}</div>', 
+                           unsafe_allow_html=True)
 
-                new_summary = st.text_area("Summary", value=meeting.get('summary', ''), 
-                                         height=100, key=f"summary_{meeting['id']}")
+                # Read-only summary
+                st.write("**Summary:**")
+                summary_text = meeting.get('summary', 'No summary available')
+                st.markdown(f'<div class="readonly-textarea">{summary_text}</div>', 
+                           unsafe_allow_html=True)
 
-                # Key points - convert array to comma-separated string
-                key_points_str = ', '.join(meeting.get('key_points', []) or [])
-                new_key_points = st.text_area("Key Points (comma/semicolon separated)", 
-                                            value=key_points_str, key=f"key_points_{meeting['id']}")
+                # Read-only key points
+                st.write("**Key Points:**")
+                key_points_text = ', '.join(meeting.get('key_points', []) or ['No key points'])
+                st.markdown(f'<div class="readonly-textarea">{key_points_text}</div>', 
+                           unsafe_allow_html=True)
 
-                # Follow-up points
-                followup_points_str = ', '.join(meeting.get('followup_points', []) or [])
-                new_followup_points = st.text_area("Follow-up Points (comma/semicolon separated)", 
-                                                 value=followup_points_str, key=f"followup_{meeting['id']}")
+                # Read-only follow-up points
+                st.write("**Follow-up Points:**")
+                followup_text = ', '.join(meeting.get('followup_points', []) or ['No follow-up points'])
+                st.markdown(f'<div class="readonly-textarea">{followup_text}</div>', 
+                           unsafe_allow_html=True)
 
             with col2:
-                # Next meeting schedule
+                # Next meeting info
+                st.write("**Next Meeting:**")
                 next_meet = meeting.get('next_meet_schedule')
                 if next_meet:
-                    next_meet_date = datetime.fromisoformat(next_meet.replace('Z', '+00:00')).date()
-                    next_meet_time = datetime.fromisoformat(next_meet.replace('Z', '+00:00')).time()
+                    next_meet_dt = datetime.fromisoformat(next_meet.replace('Z', '+00:00'))
+                    next_meet_str = next_meet_dt.strftime("%Y-%m-%d at %H:%M")
+                    st.markdown(f'<div class="readonly-field">📅 {next_meet_str}</div>', 
+                               unsafe_allow_html=True)
                 else:
-                    next_meet_date = None
-                    next_meet_time = None
+                    st.markdown('<div class="readonly-field">⏸️ Not scheduled</div>', 
+                               unsafe_allow_html=True)
 
-                new_next_date = st.date_input("Next Meeting Date", value=next_meet_date, 
-                                            key=f"next_date_{meeting['id']}")
-                new_next_time = st.time_input("Next Meeting Time", value=next_meet_time, 
-                                            key=f"next_time_{meeting['id']}")
-
-                # Action buttons
-                save_clicked = st.form_submit_button("💾 Save Changes", use_container_width=True, type="primary")
-
-                # Only show transcript download for meetings that have transcripts
-                if meeting.get('transcript_id'):
-                    transcript_clicked = st.form_submit_button("📄 Download Transcript", use_container_width=True)
-                else:
-                    st.info("📝 Manual entry - no transcript available")
-                    transcript_clicked = False
-
-            # Handle form submissions
-            if save_clicked:
-                save_meeting_changes(
-                    meeting['id'],
-                    new_title,
-                    new_summary,
-                    new_key_points,
-                    new_followup_points,
-                    new_next_date,
-                    new_next_time
-                )
-
-            if transcript_clicked and meeting.get('transcript_id'):
-                download_transcript(meeting.get('transcript_id'))
-
+        st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
 
@@ -508,12 +705,14 @@ def save_meeting_changes(meeting_id, title, summary, key_points, followup_points
 
         if success:
             st.success("Meeting updated successfully!")
-            st.rerun()
+            return True
         else:
             st.error("Failed to update meeting")
+            return False
 
     except Exception as e:
         st.error(f"Error updating meeting: {str(e)}")
+        return False
 
 def download_transcript(transcript_id):
     if not transcript_id:
