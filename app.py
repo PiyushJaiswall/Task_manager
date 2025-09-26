@@ -22,200 +22,261 @@ st.set_page_config(
 # AGGRESSIVE CSS override - this will force the blue theme
 st.markdown("""
 <style>
-    /* FORCE override all Streamlit defaults */
-    .stApp, .main, .block-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        background-attachment: fixed !important;
+    /* Import modern fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    
+    /* Dark theme with light tabs */
+    .stApp {
+        background: #0d1117 !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        color: #f0f6fc !important;
     }
     
-    /* Force hide all Streamlit branding */
+    /* Hide Streamlit branding */
     #MainMenu, footer, header, .viewerBadge_container__1QSob {
         visibility: hidden !important;
         display: none !important;
     }
     
-    /* Override Streamlit's default colors completely */
-    .stApp * {
-        color: white !important;
+    /* Override all text colors for dark theme */
+    .stApp *, .stMarkdown, p, h1, h2, h3, h4, h5, h6, span, div {
+        color: #f0f6fc !important;
     }
     
-    /* Force tab styling */
+    /* Main title - Dark theme style */
+    .main-title {
+        font-size: 34px !important;
+        font-weight: 700 !important;
+        color: #f0f6fc !important;
+        text-align: center !important;
+        margin: 40px 0 50px 0 !important;
+        letter-spacing: -0.5px !important;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
+    }
+    
+    /* Light tabs on dark background */
     .stTabs [data-baseweb="tab-list"] {
-        background: rgba(255, 255, 255, 0.15) !important;
-        backdrop-filter: blur(15px) !important;
-        border-radius: 20px !important;
-        padding: 10px !important;
-        border: 2px solid rgba(255, 255, 255, 0.3) !important;
-        box-shadow: 0 10px 40px rgba(103, 126, 234, 0.3) !important;
-        margin-bottom: 30px !important;
+        background: #f6f8fa !important;
+        border-radius: 12px !important;
+        padding: 4px !important;
+        border: 1px solid #30363d !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+        margin-bottom: 32px !important;
+        gap: 4px !important;
         justify-content: center !important;
     }
     
     .stTabs [data-baseweb="tab"] {
         background: transparent !important;
         border: none !important;
-        border-radius: 15px !important;
-        color: white !important;
-        font-weight: 600 !important;
-        font-size: 18px !important;
-        padding: 15px 30px !important;
-        margin: 0 10px !important;
-        transition: all 0.3s ease !important;
+        border-radius: 8px !important;
+        color: #656d76 !important;
+        font-weight: 500 !important;
+        font-size: 16px !important;
+        padding: 12px 24px !important;
+        transition: all 0.2s ease !important;
+        min-width: 120px !important;
     }
     
     .stTabs [aria-selected="true"] {
-        background: rgba(103, 126, 234, 0.8) !important;
+        background: #0969da !important;
         color: white !important;
-        box-shadow: 0 5px 20px rgba(103, 126, 234, 0.5) !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 8px rgba(9,105,218,0.4) !important;
     }
     
-    /* Force meeting cards to be blue */
+    /* Dark cards with light content */
+    .controls-section {
+        background: #161b22 !important;
+        border-radius: 12px !important;
+        padding: 24px !important;
+        margin-bottom: 24px !important;
+        border: 1px solid #30363d !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
+    }
+    
+    /* Meeting cards - Dark theme */
     .meeting-card {
-        background: rgba(103, 126, 234, 0.2) !important;
-        backdrop-filter: blur(20px) !important;
-        border-radius: 20px !important;
-        padding: 25px !important;
-        margin: 20px 0 !important;
-        border: 2px solid rgba(103, 126, 234, 0.4) !important;
-        box-shadow: 0 10px 40px rgba(103, 126, 234, 0.2) !important;
+        background: #161b22 !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        margin: 12px 0 !important;
+        border: 1px solid #30363d !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
         cursor: pointer !important;
-        transition: all 0.3s ease !important;
+        transition: all 0.2s ease !important;
         position: relative !important;
     }
     
     .meeting-card:hover {
-        transform: translateY(-10px) !important;
-        background: rgba(103, 126, 234, 0.3) !important;
-        box-shadow: 0 20px 60px rgba(103, 126, 234, 0.4) !important;
-        border-color: rgba(103, 126, 234, 0.6) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
+        border-color: #0969da !important;
+        background: #1c2128 !important;
     }
     
-    .meeting-card::before {
-        content: '' !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        height: 5px !important;
-        background: linear-gradient(90deg, #667eea, #764ba2) !important;
-        border-radius: 20px 20px 0 0 !important;
-    }
-    
-    /* Force button styling */
-    .stButton > button {
-        background: linear-gradient(45deg, #667eea, #764ba2) !important;
-        border: none !important;
-        border-radius: 15px !important;
-        color: white !important;
-        font-weight: 600 !important;
-        padding: 12px 25px !important;
-        font-size: 16px !important;
-        box-shadow: 0 5px 20px rgba(103, 126, 234, 0.3) !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 10px 30px rgba(103, 126, 234, 0.5) !important;
-    }
-    
-    /* Force input styling */
-    .stTextInput input, .stTextArea textarea, .stSelectbox select {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 2px solid rgba(255, 255, 255, 0.3) !important;
-        border-radius: 12px !important;
-        color: white !important;
-        backdrop-filter: blur(10px) !important;
-    }
-    
-    /* Force card styling */
     .card-title {
-        font-size: 22px !important;
-        font-weight: 700 !important;
-        color: white !important;
-        margin-bottom: 15px !important;
-        text-shadow: 0 2px 5px rgba(0,0,0,0.3) !important;
+        font-size: 17px !important;
+        font-weight: 600 !important;
+        color: #f0f6fc !important;
+        margin-bottom: 8px !important;
     }
     
     .card-subtitle {
-        font-size: 14px !important;
-        color: rgba(255, 255, 255, 0.8) !important;
-        margin-bottom: 10px !important;
-        font-weight: 500 !important;
+        font-size: 13px !important;
+        color: #8b949e !important;
+        margin-bottom: 4px !important;
+        font-weight: 400 !important;
     }
     
     .card-content {
-        color: rgba(255, 255, 255, 0.9) !important;
-        font-size: 15px !important;
-        line-height: 1.6 !important;
-        margin-top: 12px !important;
+        color: #c9d1d9 !important;
+        font-size: 14px !important;
+        line-height: 1.4 !important;
+        margin-top: 8px !important;
     }
     
-    /* Force metric cards */
+    /* Buttons - Blue accent on dark */
+    .stButton > button {
+        background: #0969da !important;
+        border: none !important;
+        border-radius: 8px !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 10px 20px !important;
+        font-size: 15px !important;
+        transition: all 0.2s ease !important;
+        font-family: inherit !important;
+    }
+    
+    .stButton > button:hover {
+        background: #0860ca !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(9,105,218,0.3) !important;
+    }
+    
+    /* Input fields - Dark theme */
+    .stTextInput input, .stTextArea textarea, .stSelectbox select {
+        background: #0d1117 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 8px !important;
+        color: #f0f6fc !important;
+        font-size: 16px !important;
+        padding: 12px 16px !important;
+        font-family: inherit !important;
+    }
+    
+    .stTextInput input:focus, .stTextArea textarea:focus {
+        border-color: #0969da !important;
+        box-shadow: 0 0 0 3px rgba(9,105,218,0.1) !important;
+        outline: none !important;
+    }
+    
+    /* Input placeholders */
+    .stTextInput input::placeholder, .stTextArea textarea::placeholder {
+        color: #6e7681 !important;
+    }
+    
+    /* Labels */
+    .stTextInput label, .stTextArea label, .stSelectbox label {
+        color: #f0f6fc !important;
+        font-weight: 500 !important;
+        font-size: 15px !important;
+        margin-bottom: 6px !important;
+    }
+    
+    /* Metric cards - Dark theme */
     .metric-card {
-        background: rgba(255, 255, 255, 0.15) !important;
-        backdrop-filter: blur(20px) !important;
-        border-radius: 18px !important;
-        padding: 25px !important;
+        background: #161b22 !important;
+        border-radius: 12px !important;
+        padding: 24px !important;
         text-align: center !important;
-        border: 2px solid rgba(255, 255, 255, 0.3) !important;
-        box-shadow: 0 10px 40px rgba(31, 38, 135, 0.4) !important;
-        transition: transform 0.3s ease !important;
+        border: 1px solid #30363d !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
+        transition: transform 0.2s ease !important;
     }
     
     .metric-card:hover {
-        transform: translateY(-8px) !important;
+        transform: translateY(-2px) !important;
+        background: #1c2128 !important;
     }
     
     .metric-title {
-        font-size: 16px !important;
-        color: rgba(255, 255, 255, 0.8) !important;
-        margin-bottom: 10px !important;
+        font-size: 13px !important;
+        color: #8b949e !important;
+        margin-bottom: 8px !important;
         font-weight: 500 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
     }
     
     .metric-value {
         font-size: 32px !important;
-        font-weight: 800 !important;
-        color: white !important;
-        text-shadow: 0 2px 5px rgba(0,0,0,0.3) !important;
+        font-weight: 700 !important;
+        color: #f0f6fc !important;
+        letter-spacing: -1px !important;
     }
     
-    /* Force title styling */
-    .main-title {
-        font-size: 42px !important;
-        font-weight: 800 !important;
-        color: white !important;
-        text-align: center !important;
-        margin-bottom: 40px !important;
-        text-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
-        background: linear-gradient(45deg, #ffffff, #e0e7ff) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        background-clip: text !important;
+    /* Form styling - Dark */
+    .stForm {
+        background: #161b22 !important;
+        border-radius: 12px !important;
+        padding: 24px !important;
+        border: 1px solid #30363d !important;
     }
     
-    /* Force all headers to be white */
-    h1, h2, h3, h4, h5, h6 {
-        color: white !important;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
-    }
-    
-    /* Force progress bar */
+    /* Progress bar - Blue accent */
     .stProgress > div > div > div {
-        background: linear-gradient(45deg, #667eea, #764ba2) !important;
-        border-radius: 10px !important;
+        background: #0969da !important;
+        border-radius: 4px !important;
     }
     
-    /* Force container backgrounds */
-    .popup-container, .controls-section {
-        background: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(20px) !important;
-        border-radius: 20px !important;
-        padding: 30px !important;
-        margin: 20px 0 !important;
-        border: 2px solid rgba(255, 255, 255, 0.2) !important;
-        box-shadow: 0 15px 50px rgba(31, 38, 135, 0.4) !important;
+    /* Success/Error messages - Dark theme */
+    .stSuccess {
+        background: #0f2f0f !important;
+        color: #4ac64a !important;
+        border-left: 4px solid #238636 !important;
+        border-radius: 8px !important;
+    }
+    
+    .stError {
+        background: #2f0f0f !important;
+        color: #ff7b72 !important;
+        border-left: 4px solid #da3633 !important;
+        border-radius: 8px !important;
+    }
+    
+    .stWarning {
+        background: #2f2a0f !important;
+        color: #ffa348 !important;
+        border-left: 4px solid #fb8500 !important;
+        border-radius: 8px !important;
+    }
+    
+    .stInfo {
+        background: #0f1f2f !important;
+        color: #58a6ff !important;
+        border-left: 4px solid #0969da !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Custom scrollbar - Dark theme */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #161b22;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #30363d;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #484f58;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -718,3 +779,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
