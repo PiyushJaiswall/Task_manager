@@ -19,265 +19,185 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# AGGRESSIVE CSS override - this will force the blue theme
 st.markdown("""
 <style>
-    /* Import modern fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-    
-    /* Dark theme with light tabs */
-    .stApp {
-        background: #0d1117 !important;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-        color: #f0f6fc !important;
-    }
-    
-    /* Hide Streamlit branding */
-    #MainMenu, footer, header, .viewerBadge_container__1QSob {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    
-    /* Override all text colors for dark theme */
-    .stApp *, .stMarkdown, p, h1, h2, h3, h4, h5, h6, span, div {
-        color: #f0f6fc !important;
-    }
-    
-    /* Main title - Dark theme style */
-    .main-title {
-        font-size: 34px !important;
-        font-weight: 700 !important;
-        color: #f0f6fc !important;
-        text-align: center !important;
-        margin: 40px 0 50px 0 !important;
-        letter-spacing: -0.5px !important;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
-    }
-    
-    /* Light tabs on dark background */
-    .stTabs [data-baseweb="tab-list"] {
-        background: #f6f8fa !important;
-        border-radius: 12px !important;
-        padding: 4px !important;
-        border: 1px solid #30363d !important;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
-        margin-bottom: 32px !important;
-        gap: 4px !important;
-        justify-content: center !important;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background: transparent !important;
-        border: none !important;
-        border-radius: 8px !important;
-        color: #656d76 !important;
-        font-weight: 500 !important;
-        font-size: 16px !important;
-        padding: 12px 24px !important;
-        transition: all 0.2s ease !important;
-        min-width: 120px !important;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: #0969da !important;
-        color: white !important;
-        font-weight: 600 !important;
-        box-shadow: 0 2px 8px rgba(9,105,218,0.4) !important;
-    }
-    
-    /* Dark cards with light content */
-    .controls-section {
-        background: #161b22 !important;
-        border-radius: 12px !important;
-        padding: 24px !important;
-        margin-bottom: 24px !important;
-        border: 1px solid #30363d !important;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
-    }
-    
-    /* Meeting cards - Dark theme */
-    .meeting-card {
-        background: #161b22 !important;
-        border-radius: 12px !important;
-        padding: 20px !important;
-        margin: 12px 0 !important;
-        border: 1px solid #30363d !important;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-        position: relative !important;
-    }
-    
-    .meeting-card:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
-        border-color: #0969da !important;
-        background: #1c2128 !important;
-    }
-    
-    .card-title {
-        font-size: 17px !important;
-        font-weight: 600 !important;
-        color: #f0f6fc !important;
-        margin-bottom: 8px !important;
-    }
-    
-    .card-subtitle {
-        font-size: 13px !important;
-        color: #8b949e !important;
-        margin-bottom: 4px !important;
-        font-weight: 400 !important;
-    }
-    
-    .card-content {
-        color: #c9d1d9 !important;
-        font-size: 14px !important;
-        line-height: 1.4 !important;
-        margin-top: 8px !important;
-    }
-    
-    /* Buttons - Blue accent on dark */
-    .stButton > button {
-        background: #0969da !important;
-        border: none !important;
-        border-radius: 8px !important;
-        color: white !important;
-        font-weight: 600 !important;
-        padding: 10px 20px !important;
-        font-size: 15px !important;
-        transition: all 0.2s ease !important;
-        font-family: inherit !important;
-    }
-    
-    .stButton > button:hover {
-        background: #0860ca !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(9,105,218,0.3) !important;
-    }
-    
-    /* Input fields - Dark theme */
-    .stTextInput input, .stTextArea textarea, .stSelectbox select {
-        background: #0d1117 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 8px !important;
-        color: #f0f6fc !important;
-        font-size: 16px !important;
-        padding: 12px 16px !important;
-        font-family: inherit !important;
-    }
-    
-    .stTextInput input:focus, .stTextArea textarea:focus {
-        border-color: #0969da !important;
-        box-shadow: 0 0 0 3px rgba(9,105,218,0.1) !important;
-        outline: none !important;
-    }
-    
-    /* Input placeholders */
-    .stTextInput input::placeholder, .stTextArea textarea::placeholder {
-        color: #6e7681 !important;
-    }
-    
-    /* Labels */
-    .stTextInput label, .stTextArea label, .stSelectbox label {
-        color: #f0f6fc !important;
-        font-weight: 500 !important;
-        font-size: 15px !important;
-        margin-bottom: 6px !important;
-    }
-    
-    /* Metric cards - Dark theme */
-    .metric-card {
-        background: #161b22 !important;
-        border-radius: 12px !important;
-        padding: 24px !important;
-        text-align: center !important;
-        border: 1px solid #30363d !important;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
-        transition: transform 0.2s ease !important;
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-2px) !important;
-        background: #1c2128 !important;
-    }
-    
-    .metric-title {
-        font-size: 13px !important;
-        color: #8b949e !important;
-        margin-bottom: 8px !important;
-        font-weight: 500 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
-    }
-    
-    .metric-value {
-        font-size: 32px !important;
-        font-weight: 700 !important;
-        color: #f0f6fc !important;
-        letter-spacing: -1px !important;
-    }
-    
-    /* Form styling - Dark */
-    .stForm {
-        background: #161b22 !important;
-        border-radius: 12px !important;
-        padding: 24px !important;
-        border: 1px solid #30363d !important;
-    }
-    
-    /* Progress bar - Blue accent */
-    .stProgress > div > div > div {
-        background: #0969da !important;
-        border-radius: 4px !important;
-    }
-    
-    /* Success/Error messages - Dark theme */
-    .stSuccess {
-        background: #0f2f0f !important;
-        color: #4ac64a !important;
-        border-left: 4px solid #238636 !important;
-        border-radius: 8px !important;
-    }
-    
-    .stError {
-        background: #2f0f0f !important;
-        color: #ff7b72 !important;
-        border-left: 4px solid #da3633 !important;
-        border-radius: 8px !important;
-    }
-    
-    .stWarning {
-        background: #2f2a0f !important;
-        color: #ffa348 !important;
-        border-left: 4px solid #fb8500 !important;
-        border-radius: 8px !important;
-    }
-    
-    .stInfo {
-        background: #0f1f2f !important;
-        color: #58a6ff !important;
-        border-left: 4px solid #0969da !important;
-        border-radius: 8px !important;
-    }
-    
-    /* Custom scrollbar - Dark theme */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: #161b22;
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: #30363d;
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: #484f58;
-    }
+/* =========================== */
+/*      Global App Settings    */
+/* =========================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+.stApp {
+    background-color: #0d1117 !important;
+    color: #f0f6fc !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Hide Streamlit default UI */
+#MainMenu, footer, header, .viewerBadge_container__1QSob {
+    visibility: hidden !important;
+    display: none !important;
+}
+
+/* General text colors */
+.stApp *, .stMarkdown, p, h1, h2, h3, h4, h5, h6, span, div {
+    color: #f0f6fc !important;
+}
+
+/* =========================== */
+/*       Main Title Style      */
+/* =========================== */
+.main-title {
+    font-size: 34px !important;
+    font-weight: 700 !important;
+    color: #f0f6fc !important;
+    text-align: center !important;
+    margin: 40px 0 50px 0 !important;
+    letter-spacing: -0.5px !important;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
+}
+
+/* =========================== */
+/*        Tabs Styling         */
+/* =========================== */
+.stTabs [data-baseweb="tab-list"] {
+    background-color: #21262d !important; /* subtle dark gray for tab container */
+    border-radius: 12px !important;
+    padding: 4px !important;
+    border: 1px solid #30363d !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+    margin-bottom: 32px !important;
+    gap: 4px !important;
+    justify-content: center !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: #161b22 !important;
+    color: #c9d1d9 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    font-size: 16px !important;
+    padding: 12px 24px !important;
+    min-width: 120px !important;
+    transition: all 0.2s ease !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: #0969da !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px rgba(9,105,218,0.4) !important;
+}
+
+/* =========================== */
+/*       Card Styling          */
+/* =========================== */
+.controls-section, .meeting-card, .metric-card, .stForm {
+    background-color: #161b22 !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    border: 1px solid #30363d !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
+    transition: all 0.2s ease !important;
+}
+
+.meeting-card:hover, .metric-card:hover {
+    transform: translateY(-2px) !important;
+    background-color: #1c2128 !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
+    border-color: #0969da !important;
+}
+
+.card-title {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    color: #f0f6fc !important;
+    margin-bottom: 8px !important;
+}
+
+.card-subtitle {
+    font-size: 13px !important;
+    color: #8b949e !important;
+    margin-bottom: 4px !important;
+}
+
+.card-content {
+    font-size: 14px !important;
+    color: #c9d1d9 !important;
+    line-height: 1.4 !important;
+    margin-top: 8px !important;
+}
+
+/* =========================== */
+/*       Buttons Styling       */
+/* =========================== */
+.stButton > button {
+    background-color: #0969da !important;
+    border: none !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    padding: 10px 20px !important;
+    font-family: inherit !important;
+    transition: all 0.2s ease !important;
+}
+
+.stButton > button:hover {
+    background-color: #0860ca !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(9,105,218,0.3) !important;
+}
+
+/* =========================== */
+/*       Input Fields          */
+/* =========================== */
+.stTextInput input, .stTextArea textarea, .stSelectbox select {
+    background-color: #0d1117 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 8px !important;
+    color: #f0f6fc !important;
+    font-size: 16px !important;
+    padding: 12px 16px !important;
+}
+
+.stTextInput input:focus, .stTextArea textarea:focus {
+    border-color: #0969da !important;
+    box-shadow: 0 0 0 3px rgba(9,105,218,0.1) !important;
+    outline: none !important;
+}
+
+.stTextInput input::placeholder, .stTextArea textarea::placeholder {
+    color: #6e7681 !important;
+}
+
+.stTextInput label, .stTextArea label, .stSelectbox label {
+    color: #f0f6fc !important;
+    font-weight: 500 !important;
+    font-size: 15px !important;
+    margin-bottom: 6px !important;
+}
+
+/* =========================== */
+/*       Scrollbar Styling     */
+/* =========================== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: #161b22;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #30363d;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #484f58;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -779,4 +699,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
