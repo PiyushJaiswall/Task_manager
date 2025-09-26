@@ -301,72 +301,106 @@ def create_meeting_card(meeting, index):
     return card_html
 
 def show_meeting_popup(meeting):
-    """Show meeting details in a popup-like section."""
-
+    """Show meeting details in a floating modal-like overlay."""
+    
     if "show_popup" not in st.session_state:
-        st.session_state.show_popup = True
+        st.session_state.show_popup = False
         st.session_state.edit_mode = False
 
+    # Only render the popup if triggered
     if not st.session_state.show_popup:
         return
 
-    st.markdown('<div style="padding:20px; background:#161b22; border-radius:12px; border:1px solid #30363d;">', unsafe_allow_html=True)
-    st.markdown("### 📋 Meeting Details")
+    # Modal overlay
+    st.markdown("""
+    <style>
+    .modal-background {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(0,0,0,0.6);
+        z-index: 9998;
+    }
+    .modal-content {
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #161b22;
+        color: #f0f6fc;
+        padding: 30px;
+        border-radius: 12px;
+        width: 60%;
+        max-height: 80%;
+        overflow-y: auto;
+        z-index: 9999;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    }
+    .close-btn {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        background: #0969da;
+        color: #fff;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .close-btn:hover { background: #0860ca; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Background overlay
+    st.markdown('<div class="modal-background"></div>', unsafe_allow_html=True)
+
+    # Modal content
+    st.markdown('<div class="modal-content">', unsafe_allow_html=True)
 
     col1, col2 = st.columns([3, 1])
 
-    # Always define these first
-    key_points = meeting.get('key_points', [])
-    followup_points = meeting.get('followup_points', [])
-
     with col2:
-        if st.button("✏️ Edit", key="edit_btn"):
-            st.session_state.edit_mode = True
-        if st.button("❌ Close", key="close_btn"):
+        if st.button("❌ Close", key="popup_close"):
             st.session_state.show_popup = False
             st.session_state.edit_mode = False
             st.experimental_rerun()
 
-    with col1:
-        if st.session_state.edit_mode:
-            title = st.text_input("Meeting Title", value=meeting.get('title', ''), key="title_input")
-            summary = st.text_area("Summary", value=meeting.get('summary', ''), height=100, key="summary_input")
+        if st.button("✏️ Edit", key="popup_edit"):
+            st.session_state.edit_mode = True
 
-            # Edit key points
+    with col1:
+        # Always define points
+        key_points = meeting.get('key_points', [])
+        followup_points = meeting.get('followup_points', [])
+
+        if st.session_state.edit_mode:
+            title = st.text_input("Meeting Title", value=meeting.get('title', ''), key="popup_title")
+            summary = st.text_area("Summary", value=meeting.get('summary', ''), height=100, key="popup_summary")
+
             st.write("**Key Points:**")
             updated_key_points = []
             for i, point in enumerate(key_points):
-                point_value = st.text_input(f"Key Point {i+1}", value=point, key=f"key_point_{i}")
-                if point_value.strip():
-                    updated_key_points.append(point_value)
+                p = st.text_input(f"Key Point {i+1}", value=point, key=f"popup_key_{i}")
+                if p.strip(): updated_key_points.append(p)
+            new_point = st.text_input("Add New Key Point", key="popup_new_key")
+            if new_point.strip(): updated_key_points.append(new_point)
 
-            new_point = st.text_input("Add New Key Point", key="new_key_point")
-            if new_point.strip():
-                updated_key_points.append(new_point)
-
-            # Edit followup points
             st.write("**Follow-up Points:**")
-            updated_followup_points = []
+            updated_followup = []
             for i, point in enumerate(followup_points):
-                point_value = st.text_input(f"Follow-up Point {i+1}", value=point, key=f"followup_point_{i}")
-                if point_value.strip():
-                    updated_followup_points.append(point_value)
+                p = st.text_input(f"Follow-up Point {i+1}", value=point, key=f"popup_followup_{i}")
+                if p.strip(): updated_followup.append(p)
+            new_followup = st.text_input("Add New Follow-up", key="popup_new_followup")
+            if new_followup.strip(): updated_followup.append(new_followup)
 
-            new_followup = st.text_input("Add New Follow-up Point", key="new_followup_point")
-            if new_followup.strip():
-                updated_followup_points.append(new_followup)
-
-            # Next meeting
             next_schedule = st.date_input(
                 "Next Meeting Schedule",
                 value=pd.to_datetime(meeting.get('next_meet_schedule')).date() if meeting.get('next_meet_schedule') else None,
-                key="next_meeting"
+                key="popup_next_meeting"
             )
 
-            if st.button("💾 Save Changes", key="save_changes"):
-                next_schedule_str = next_schedule.isoformat() if next_schedule else None
+            if st.button("💾 Save Changes", key="popup_save"):
                 success = update_meeting(
-                    meeting['id'], title, summary, updated_key_points, updated_followup_points, next_schedule_str
+                    meeting['id'], title, summary, updated_key_points, updated_followup,
+                    next_schedule.isoformat() if next_schedule else None
                 )
                 if success:
                     st.success("Meeting updated successfully!")
@@ -379,11 +413,8 @@ def show_meeting_popup(meeting):
             st.markdown(f"**Title:** {meeting.get('title', 'N/A')}")
             source = "Automatic" if meeting.get('transcript_id') else "Manual"
             st.markdown(f"**Source:** {source}")
-            created_date = pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')
-            updated_date = pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')
-            st.markdown(f"**Created:** {created_date}")
-            st.markdown(f"**Updated:** {updated_date}")
-
+            st.markdown(f"**Created:** {pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')}")
+            st.markdown(f"**Updated:** {pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')}")
             st.markdown("**Summary:**")
             st.write(meeting.get('summary', 'No summary available'))
 
@@ -402,8 +433,7 @@ def show_meeting_popup(meeting):
                 st.write("No follow-up points available")
 
             if meeting.get('next_meet_schedule'):
-                next_date = pd.to_datetime(meeting['next_meet_schedule']).strftime('%Y-%m-%d')
-                st.markdown(f"**Next Meeting:** {next_date}")
+                st.markdown(f"**Next Meeting:** {pd.to_datetime(meeting['next_meet_schedule']).strftime('%Y-%m-%d')}")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -705,6 +735,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
