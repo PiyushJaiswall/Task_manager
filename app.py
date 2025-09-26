@@ -37,7 +37,7 @@ st.set_page_config(
 # Modern macOS-style CSS
 st.markdown("""
 <style>
-    /* Import SF Pro Display font (macOS system font) */
+    /* Import Inter font */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     
     /* Global macOS-style theme */
@@ -149,76 +149,6 @@ st.markdown("""
         margin-top: 8px !important;
     }
     
-    /* Modal overlay - macOS style */
-    .modal-overlay {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        background: rgba(0,0,0,0.4) !important;
-        backdrop-filter: blur(8px) !important;
-        z-index: 9999 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        animation: fadeIn 0.2s ease !important;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    /* Modal content - macOS window style */
-    .modal-content {
-        background: white !important;
-        border-radius: 12px !important;
-        padding: 32px !important;
-        margin: 20px !important;
-        max-width: 600px !important;
-        max-height: 80vh !important;
-        overflow-y: auto !important;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.25) !important;
-        border: 1px solid #e5e5e7 !important;
-        animation: slideUp 0.3s ease !important;
-        position: relative !important;
-    }
-    
-    @keyframes slideUp {
-        from { 
-            transform: translateY(50px);
-            opacity: 0;
-        }
-        to { 
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-    
-    /* Close button - macOS style */
-    .close-button {
-        position: absolute !important;
-        top: 16px !important;
-        right: 16px !important;
-        width: 24px !important;
-        height: 24px !important;
-        border-radius: 50% !important;
-        background: #ff5f57 !important;
-        border: none !important;
-        cursor: pointer !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        color: white !important;
-        font-size: 12px !important;
-        font-weight: bold !important;
-    }
-    
-    .close-button:hover {
-        background: #ff3b30 !important;
-    }
-    
     /* Buttons - macOS style */
     .stButton > button {
         background: #007aff !important;
@@ -235,17 +165,6 @@ st.markdown("""
     .stButton > button:hover {
         background: #0056cc !important;
         transform: translateY(-1px) !important;
-    }
-    
-    /* Secondary button */
-    .secondary-button {
-        background: #f2f2f7 !important;
-        color: #007aff !important;
-    }
-    
-    .secondary-button:hover {
-        background: #e5e5ea !important;
-        color: #0056cc !important;
     }
     
     /* Input fields - macOS style */
@@ -346,54 +265,7 @@ st.markdown("""
         border-left: 4px solid #2196f3 !important;
         border-radius: 8px !important;
     }
-    
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
-    }
-    
-    /* Hide modal when not active */
-    .hidden {
-        display: none !important;
-    }
 </style>
-
-<script>
-function closeModal() {
-    const modal = document.querySelector('.modal-overlay');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-}
-
-// Close modal when clicking outside
-document.addEventListener('click', function(event) {
-    if (event.target.classList.contains('modal-overlay')) {
-        closeModal();
-    }
-});
-
-// Close modal with escape key
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeModal();
-    }
-});
-</script>
 """, unsafe_allow_html=True)
 
 # Initialize session state
@@ -406,23 +278,58 @@ if 'edit_mode' not in st.session_state:
 if 'show_manual_entry' not in st.session_state:
     st.session_state.show_manual_entry = False
 
-# Mock functions for when dependencies aren't available
-def fetch_meetings():
+# FIXED: Mock functions with different names to avoid recursion
+def get_meetings_data():
+    """Get meetings from database or return mock data"""
     if SUPABASE_AVAILABLE:
-        return fetch_meetings()
+        try:
+            # Call the actual supabase function
+            response = supabase.table("meetings").select("*, transcripts(meeting_title, audio_url)").order("created_at", desc=True).execute()
+            return response.data
+        except Exception as e:
+            st.error(f"Database error: {e}")
+            return get_mock_meetings()
     else:
-        return [{
-            'id': '1',
-            'title': 'ASAP Register the Company',
-            'summary': 'Client wants his company to be registered ASAP. Discussed the process and requirements.',
-            'key_points': ['Register private limited company', 'Prepare required documents', 'File with registrar'],
-            'followup_points': ['Send document checklist', 'Schedule follow-up call'],
-            'created_at': '2025-09-25T14:45:00',
-            'updated_at': '2025-09-25T14:50:00',
-            'transcript_id': None
-        }]
+        return get_mock_meetings()
 
-def get_database_stats():
+def get_mock_meetings():
+    """Return mock meeting data for testing"""
+    return [{
+        'id': '1',
+        'title': 'ASAP Register the Company',
+        'summary': 'Client wants his company to be registered ASAP. Discussed the process and requirements for private limited company registration.',
+        'key_points': ['Register private limited company', 'Prepare required documents', 'File with registrar'],
+        'followup_points': ['Send document checklist', 'Schedule follow-up call'],
+        'created_at': '2025-09-25T14:45:00',
+        'updated_at': '2025-09-25T14:50:00',
+        'transcript_id': None
+    }]
+
+def get_storage_stats():
+    """Get database storage statistics"""
+    if SUPABASE_AVAILABLE:
+        try:
+            meetings_response = supabase.table("meetings").select("id", count="exact").execute()
+            meetings_count = meetings_response.count or 0
+            
+            transcripts_response = supabase.table("transcripts").select("id", count="exact").execute()
+            transcripts_count = transcripts_response.count or 0
+            
+            return {
+                'meetings_count': meetings_count,
+                'transcripts_count': transcripts_count,
+                'meetings_size_mb': meetings_count * 0.01,
+                'transcripts_size_mb': transcripts_count * 0.05,
+                'total_size_mb': (meetings_count * 0.01) + (transcripts_count * 0.05)
+            }
+        except Exception as e:
+            st.error(f"Database error: {e}")
+            return get_mock_stats()
+    else:
+        return get_mock_stats()
+
+def get_mock_stats():
+    """Return mock storage statistics"""
     return {
         'meetings_count': 1,
         'transcripts_count': 0,
@@ -431,7 +338,30 @@ def get_database_stats():
         'total_size_mb': 0.1
     }
 
+def save_new_meeting(title, summary, key_points, followup_points, next_schedule=None):
+    """Save a new meeting to database"""
+    if SUPABASE_AVAILABLE:
+        try:
+            new_meeting_data = {
+                "title": title,
+                "summary": summary,
+                "key_points": key_points,
+                "followup_points": followup_points
+            }
+            if next_schedule:
+                new_meeting_data["next_meet_schedule"] = next_schedule
+                
+            response = supabase.table("meetings").insert(new_meeting_data).execute()
+            return True
+        except Exception as e:
+            st.error(f"Database error: {e}")
+            return False
+    else:
+        st.info(f"Mock save: {title}")
+        return True
+
 def create_meeting_card(meeting, index):
+    """Create HTML for a meeting card"""
     source = "Automatic" if meeting.get('transcript_id') else "Manual"
     created_date = pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')
     updated_date = pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')
@@ -444,7 +374,7 @@ def create_meeting_card(meeting, index):
             key_points_preview += f" (+{len(meeting['key_points']) - 1} more)"
     
     card_html = f"""
-    <div class="meeting-card" onclick="showMeetingModal('{index}')">
+    <div class="meeting-card">
         <div class="card-title">📋 {meeting.get('title', 'Untitled Meeting')}</div>
         <div class="card-subtitle">📍 Source: {source} • 📅 Created: {created_date}</div>
         <div class="card-subtitle">🔄 Updated: {updated_date}</div>
@@ -453,103 +383,65 @@ def create_meeting_card(meeting, index):
     """
     return card_html
 
-def show_meeting_modal(meeting):
+def show_meeting_details_popup(meeting):
+    """Show meeting details in a popup modal"""
     if not meeting:
         return
+    
+    with st.container():
+        st.markdown("---")
+        st.markdown("### 📋 Meeting Details")
         
-    source = "Automatic" if meeting.get('transcript_id') else "Manual"
-    created_date = pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')
-    updated_date = pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')
-    
-    modal_html = f"""
-    <div class="modal-overlay" id="meetingModal">
-        <div class="modal-content">
-            <button class="close-button" onclick="closeModal()">×</button>
-            
-            <h2 style="color: #1d1d1f; margin-bottom: 24px; font-size: 24px; font-weight: 700;">
-                📋 Meeting Details
-            </h2>
-            
-            <div style="margin-bottom: 16px;">
-                <strong style="color: #1d1d1f;">Title:</strong>
-                <span style="color: #424245;">{meeting.get('title', 'N/A')}</span>
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <strong style="color: #1d1d1f;">Source:</strong>
-                <span style="color: #424245;">{source}</span>
-            </div>
-            
-            <div style="margin-bottom: 16px;">
-                <strong style="color: #1d1d1f;">Created:</strong>
-                <span style="color: #424245;">{created_date}</span>
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-                <strong style="color: #1d1d1f;">Updated:</strong>
-                <span style="color: #424245;">{updated_date}</span>
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-                <strong style="color: #1d1d1f; display: block; margin-bottom: 8px;">Summary:</strong>
-                <p style="color: #424245; line-height: 1.5; margin: 0;">
-                    {meeting.get('summary', 'No summary available')}
-                </p>
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-                <strong style="color: #1d1d1f; display: block; margin-bottom: 8px;">Key Points:</strong>
-                <ul style="color: #424245; line-height: 1.5; margin: 0; padding-left: 20px;">
-    """
-    
-    key_points = meeting.get('key_points', [])
-    if key_points:
-        for point in key_points:
-            modal_html += f"<li>{point}</li>"
-    else:
-        modal_html += "<li>No key points available</li>"
-    
-    modal_html += """
-                </ul>
-            </div>
-            
-            <div style="margin-bottom: 30px;">
-                <strong style="color: #1d1d1f; display: block; margin-bottom: 8px;">Follow-up Points:</strong>
-                <ul style="color: #424245; line-height: 1.5; margin: 0; padding-left: 20px;">
-    """
-    
-    followup_points = meeting.get('followup_points', [])
-    if followup_points:
-        for point in followup_points:
-            modal_html += f"<li>{point}</li>"
-    else:
-        modal_html += "<li>No follow-up points available</li>"
-    
-    modal_html += """
-                </ul>
-            </div>
-            
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button onclick="editMeeting()" style="background: #f2f2f7; color: #007aff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; cursor: pointer;">
-                    ✏️ Edit
-                </button>
-                <button onclick="closeModal()" style="background: #007aff; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; cursor: pointer;">
-                    Done
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-    function editMeeting() {
-        alert('Edit functionality coming soon!');
-    }
-    </script>
-    """
-    
-    return modal_html
+        # Header with close button
+        col1, col2 = st.columns([4, 1])
+        with col2:
+            if st.button("❌ Close", key="close_popup"):
+                st.session_state.show_popup = False
+                st.rerun()
+        
+        # Meeting information
+        source = "Automatic" if meeting.get('transcript_id') else "Manual"
+        created_date = pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')
+        updated_date = pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')
+        
+        st.markdown(f"**📝 Title:** {meeting.get('title', 'N/A')}")
+        st.markdown(f"**📍 Source:** {source}")
+        st.markdown(f"**📅 Created:** {created_date}")
+        st.markdown(f"**🔄 Updated:** {updated_date}")
+        
+        st.markdown("**📋 Summary:**")
+        st.write(meeting.get('summary', 'No summary available'))
+        
+        st.markdown("**🔑 Key Points:**")
+        key_points = meeting.get('key_points', [])
+        if key_points:
+            for i, point in enumerate(key_points, 1):
+                st.write(f"{i}. {point}")
+        else:
+            st.write("No key points available")
+        
+        st.markdown("**📝 Follow-up Points:**")
+        followup_points = meeting.get('followup_points', [])
+        if followup_points:
+            for i, point in enumerate(followup_points, 1):
+                st.write(f"{i}. {point}")
+        else:
+            st.write("No follow-up points available")
+        
+        # Action buttons
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("✏️ Edit Meeting", key="edit_meeting"):
+                st.info("Edit functionality coming soon!")
+        with col2:
+            if st.button("📤 Export", key="export_meeting"):
+                st.info("Export functionality coming soon!")
+        
+        st.markdown("---")
 
 def meeting_details_tab():
+    """Main meeting details tab content"""
+    # Controls section
     st.markdown('<div class="controls-section">', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -566,11 +458,13 @@ def meeting_details_tab():
     
     st.markdown('</div>', unsafe_allow_html=True)
     
+    # Show manual entry form if requested
     if st.session_state.get('show_manual_entry', False):
-        manual_entry_form()
+        show_manual_entry_form()
         return
     
-    meetings = fetch_meetings()
+    # Fetch meetings using the fixed function
+    meetings = get_meetings_data()
     
     if not meetings:
         st.info("🎯 No meetings found. Use the Manual Entry button to add your first meeting.")
@@ -578,16 +472,23 @@ def meeting_details_tab():
     
     st.markdown(f"### Found {len(meetings)} meeting(s)")
     
+    # Display meeting cards
     for index, meeting in enumerate(meetings):
         card_html = create_meeting_card(meeting, index)
         st.markdown(card_html, unsafe_allow_html=True)
         
-        # Show modal when card is clicked
+        # View details button
         if st.button(f"👁️ View Details", key=f"view_meeting_{index}"):
-            modal_html = show_meeting_modal(meeting)
-            st.markdown(modal_html, unsafe_allow_html=True)
+            st.session_state.selected_meeting = meeting
+            st.session_state.show_popup = True
+            st.rerun()
+    
+    # Show popup if meeting is selected
+    if st.session_state.show_popup and st.session_state.selected_meeting:
+        show_meeting_details_popup(st.session_state.selected_meeting)
 
-def manual_entry_form():
+def show_manual_entry_form():
+    """Show the manual meeting entry form"""
     st.markdown("### ✏️ Manual Meeting Entry")
     
     with st.form("manual_entry_form", clear_on_submit=True):
@@ -605,6 +506,7 @@ def manual_entry_form():
         
         next_meeting_date = st.date_input("Next Meeting Date (Optional)")
         
+        # Form buttons
         col1, col2 = st.columns(2)
         with col1:
             submitted = st.form_submit_button("💾 Save Meeting")
@@ -615,19 +517,33 @@ def manual_entry_form():
         
         if submitted:
             if title and summary:
-                st.success("✅ Meeting saved successfully!")
-                st.session_state.show_manual_entry = False
-                st.rerun()
+                # Prepare data
+                key_points = [point for point in [key_point_1, key_point_2, key_point_3] if point.strip()]
+                followup_points = [point for point in [followup_1, followup_2] if point.strip()]
+                next_schedule = next_meeting_date.isoformat() if next_meeting_date else None
+                
+                # Save meeting
+                success = save_new_meeting(title, summary, key_points, followup_points, next_schedule)
+                
+                if success:
+                    st.success("✅ Meeting saved successfully!")
+                    st.session_state.show_manual_entry = False
+                    st.rerun()
+                else:
+                    st.error("❌ Error saving meeting. Please try again.")
             else:
                 st.error("❌ Please fill in the required fields (Title and Summary)")
 
 def space_management_tab():
+    """Space management tab content"""
     st.markdown("## 💾 Space Management")
     
-    stats = get_database_stats()
+    # Get storage statistics using the fixed function
+    stats = get_storage_stats()
     
     st.markdown("### Storage Overview")
     
+    # Metrics cards
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -663,11 +579,13 @@ def space_management_tab():
         </div>
         """, unsafe_allow_html=True)
     
+    # Storage usage progress
     st.markdown("### Storage Usage")
     progress_value = min(stats['total_size_mb'] / 1024, 1.0)
     st.progress(progress_value)
     st.markdown(f"**{stats['total_size_mb']:.1f} MB of 1024 MB used ({progress_value*100:.1f}%)**")
     
+    # Storage breakdown chart
     if PLOTLY_AVAILABLE:
         st.markdown("### Storage Breakdown")
         fig = go.Figure(data=[
@@ -677,13 +595,21 @@ def space_management_tab():
         fig.update_layout(
             barmode='stack',
             title="Storage Usage by Data Type",
-            yaxis_title="Size (MB)"
+            yaxis_title="Size (MB)",
+            template="plotly_white"
         )
         st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("📊 Install Plotly to see storage breakdown chart")
 
 def main():
+    """Main application function"""
     # App title
     st.markdown('<h1 class="main-title">📋 Meeting Manager</h1>', unsafe_allow_html=True)
+    
+    # Show dependency status
+    if not SUPABASE_AVAILABLE:
+        st.warning("⚠️ Database not connected - Using mock data")
     
     # Create tabs
     tab1, tab2 = st.tabs(["📋 Meeting Details", "💾 Space Management"])
