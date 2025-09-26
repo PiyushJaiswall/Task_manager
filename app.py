@@ -302,7 +302,7 @@ def create_meeting_card(meeting, index):
 
 def show_meeting_popup(meeting):
     """Show meeting details in a popup-like section."""
-    
+
     if "show_popup" not in st.session_state:
         st.session_state.show_popup = True
         st.session_state.edit_mode = False
@@ -315,23 +315,26 @@ def show_meeting_popup(meeting):
 
     col1, col2 = st.columns([3, 1])
 
+    # Always define these first
+    key_points = meeting.get('key_points', [])
+    followup_points = meeting.get('followup_points', [])
+
     with col2:
         if st.button("✏️ Edit", key="edit_btn"):
             st.session_state.edit_mode = True
         if st.button("❌ Close", key="close_btn"):
             st.session_state.show_popup = False
             st.session_state.edit_mode = False
-            st.experimental_rerun()  # safer rerun
+            st.experimental_rerun()
 
     with col1:
         if st.session_state.edit_mode:
             title = st.text_input("Meeting Title", value=meeting.get('title', ''), key="title_input")
             summary = st.text_area("Summary", value=meeting.get('summary', ''), height=100, key="summary_input")
 
-            # Key points
-            key_points = meeting.get('key_points', [])
-            updated_key_points = []
+            # Edit key points
             st.write("**Key Points:**")
+            updated_key_points = []
             for i, point in enumerate(key_points):
                 point_value = st.text_input(f"Key Point {i+1}", value=point, key=f"key_point_{i}")
                 if point_value.strip():
@@ -341,10 +344,9 @@ def show_meeting_popup(meeting):
             if new_point.strip():
                 updated_key_points.append(new_point)
 
-            # Follow-up points
-            followup_points = meeting.get('followup_points', [])
-            updated_followup_points = []
+            # Edit followup points
             st.write("**Follow-up Points:**")
+            updated_followup_points = []
             for i, point in enumerate(followup_points):
                 point_value = st.text_input(f"Follow-up Point {i+1}", value=point, key=f"followup_point_{i}")
                 if point_value.strip():
@@ -354,8 +356,9 @@ def show_meeting_popup(meeting):
             if new_followup.strip():
                 updated_followup_points.append(new_followup)
 
+            # Next meeting
             next_schedule = st.date_input(
-                "Next Meeting Schedule", 
+                "Next Meeting Schedule",
                 value=pd.to_datetime(meeting.get('next_meet_schedule')).date() if meeting.get('next_meet_schedule') else None,
                 key="next_meeting"
             )
@@ -392,7 +395,6 @@ def show_meeting_popup(meeting):
                 st.write("No key points available")
 
             st.markdown("**Follow-up Points:**")
-            followup_points = meeting.get('followup_points', [])
             if followup_points:
                 for i, point in enumerate(followup_points, 1):
                     st.write(f"{i}. {point}")
@@ -703,6 +705,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
