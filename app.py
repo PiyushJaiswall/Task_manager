@@ -301,105 +301,109 @@ def create_meeting_card(meeting, index):
     return card_html
 
 def show_meeting_popup(meeting):
-    with st.container():
-        st.markdown('<div class="popup-container">', unsafe_allow_html=True)
-        st.markdown("### 📋 Meeting Details")
-        
-        col1, col2 = st.columns([3, 1])
-        
-        with col2:
-            if st.button("✏️ Edit", key="edit_btn"):
-                st.session_state.edit_mode = True
-            if st.button("❌ Close", key="close_btn"):
-                st.session_state.show_popup = False
-                st.session_state.edit_mode = False
-                st.rerun()
-        
-        with col1:
-            if st.session_state.edit_mode:
-                title = st.text_input("Meeting Title", value=meeting.get('title', ''))
-                summary = st.text_area("Summary", value=meeting.get('summary', ''), height=100)
-                
-                st.write("**Key Points:**")
-                key_points = meeting.get('key_points', [])
-                updated_key_points = []
-                
-                for i, point in enumerate(key_points):
-                    point_value = st.text_input(f"Key Point {i+1}", value=point, key=f"key_point_{i}")
-                    if point_value.strip():
-                        updated_key_points.append(point_value)
-                
-                new_key_point = st.text_input("Add New Key Point", key="new_key_point")
-                if new_key_point.strip():
-                    updated_key_points.append(new_key_point)
-                
-                st.write("**Follow-up Points:**")
-                followup_points = meeting.get('followup_points', [])
-                updated_followup_points = []
-                
-                for i, point in enumerate(followup_points):
-                    point_value = st.text_input(f"Follow-up Point {i+1}", value=point, key=f"followup_point_{i}")
-                    if point_value.strip():
-                        updated_followup_points.append(point_value)
-                
-                new_followup_point = st.text_input("Add New Follow-up Point", key="new_followup_point")
-                if new_followup_point.strip():
-                    updated_followup_points.append(new_followup_point)
-                
-                next_schedule = st.date_input("Next Meeting Schedule", 
-                                            value=pd.to_datetime(meeting.get('next_meet_schedule')).date() if meeting.get('next_meet_schedule') else None)
-                
-                if st.button("💾 Save Changes", key="save_changes"):
-                    next_schedule_str = next_schedule.isoformat() if next_schedule else None
-                    success = update_meeting(
-                        meeting['id'], 
-                        title, 
-                        summary, 
-                        updated_key_points, 
-                        updated_followup_points,
-                        next_schedule_str
-                    )
-                    if success:
-                        st.success("Meeting updated successfully!")
-                        st.session_state.edit_mode = False
-                        st.rerun()
-                    else:
-                        st.error("Error updating meeting")
-            
+    """Show meeting details in a popup-like section."""
+    
+    if "show_popup" not in st.session_state:
+        st.session_state.show_popup = True
+        st.session_state.edit_mode = False
+
+    if not st.session_state.show_popup:
+        return
+
+    st.markdown('<div style="padding:20px; background:#161b22; border-radius:12px; border:1px solid #30363d;">', unsafe_allow_html=True)
+    st.markdown("### 📋 Meeting Details")
+
+    col1, col2 = st.columns([3, 1])
+
+    with col2:
+        if st.button("✏️ Edit", key="edit_btn"):
+            st.session_state.edit_mode = True
+        if st.button("❌ Close", key="close_btn"):
+            st.session_state.show_popup = False
+            st.session_state.edit_mode = False
+            st.experimental_rerun()  # safer rerun
+
+    with col1:
+        if st.session_state.edit_mode:
+            title = st.text_input("Meeting Title", value=meeting.get('title', ''), key="title_input")
+            summary = st.text_area("Summary", value=meeting.get('summary', ''), height=100, key="summary_input")
+
+            # Key points
+            key_points = meeting.get('key_points', [])
+            updated_key_points = []
+            st.write("**Key Points:**")
+            for i, point in enumerate(key_points):
+                point_value = st.text_input(f"Key Point {i+1}", value=point, key=f"key_point_{i}")
+                if point_value.strip():
+                    updated_key_points.append(point_value)
+
+            new_point = st.text_input("Add New Key Point", key="new_key_point")
+            if new_point.strip():
+                updated_key_points.append(new_point)
+
+            # Follow-up points
+            followup_points = meeting.get('followup_points', [])
+            updated_followup_points = []
+            st.write("**Follow-up Points:**")
+            for i, point in enumerate(followup_points):
+                point_value = st.text_input(f"Follow-up Point {i+1}", value=point, key=f"followup_point_{i}")
+                if point_value.strip():
+                    updated_followup_points.append(point_value)
+
+            new_followup = st.text_input("Add New Follow-up Point", key="new_followup_point")
+            if new_followup.strip():
+                updated_followup_points.append(new_followup)
+
+            next_schedule = st.date_input(
+                "Next Meeting Schedule", 
+                value=pd.to_datetime(meeting.get('next_meet_schedule')).date() if meeting.get('next_meet_schedule') else None,
+                key="next_meeting"
+            )
+
+            if st.button("💾 Save Changes", key="save_changes"):
+                next_schedule_str = next_schedule.isoformat() if next_schedule else None
+                success = update_meeting(
+                    meeting['id'], title, summary, updated_key_points, updated_followup_points, next_schedule_str
+                )
+                if success:
+                    st.success("Meeting updated successfully!")
+                    st.session_state.edit_mode = False
+                    st.experimental_rerun()
+                else:
+                    st.error("Error updating meeting")
+        else:
+            # View mode
+            st.markdown(f"**Title:** {meeting.get('title', 'N/A')}")
+            source = "Automatic" if meeting.get('transcript_id') else "Manual"
+            st.markdown(f"**Source:** {source}")
+            created_date = pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')
+            updated_date = pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')
+            st.markdown(f"**Created:** {created_date}")
+            st.markdown(f"**Updated:** {updated_date}")
+
+            st.markdown("**Summary:**")
+            st.write(meeting.get('summary', 'No summary available'))
+
+            st.markdown("**Key Points:**")
+            if key_points:
+                for i, point in enumerate(key_points, 1):
+                    st.write(f"{i}. {point}")
             else:
-                source = "🤖 Automatic" if meeting.get('transcript_id') else "✍️ Manual"
-                created_date = pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')
-                updated_date = pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')
-                
-                st.markdown(f"**📝 Title:** {meeting.get('title', 'N/A')}")
-                st.markdown(f"**📍 Source:** {source}")
-                st.markdown(f"**📅 Created:** {created_date}")
-                st.markdown(f"**🔄 Updated:** {updated_date}")
-                
-                st.markdown("**📋 Summary:**")
-                st.write(meeting.get('summary', 'No summary available'))
-                
-                st.markdown("**🔑 Key Points:**")
-                key_points = meeting.get('key_points', [])
-                if key_points:
-                    for i, point in enumerate(key_points, 1):
-                        st.write(f"{i}. {point}")
-                else:
-                    st.write("No key points available")
-                
-                st.markdown("**📝 Follow-up Points:**")
-                followup_points = meeting.get('followup_points', [])
-                if followup_points:
-                    for i, point in enumerate(followup_points, 1):
-                        st.write(f"{i}. {point}")
-                else:
-                    st.write("No follow-up points available")
-                
-                if meeting.get('next_meet_schedule'):
-                    next_date = pd.to_datetime(meeting['next_meet_schedule']).strftime('%Y-%m-%d')
-                    st.markdown(f"**📅 Next Meeting:** {next_date}")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+                st.write("No key points available")
+
+            st.markdown("**Follow-up Points:**")
+            followup_points = meeting.get('followup_points', [])
+            if followup_points:
+                for i, point in enumerate(followup_points, 1):
+                    st.write(f"{i}. {point}")
+            else:
+                st.write("No follow-up points available")
+
+            if meeting.get('next_meet_schedule'):
+                next_date = pd.to_datetime(meeting['next_meet_schedule']).strftime('%Y-%m-%d')
+                st.markdown(f"**Next Meeting:** {next_date}")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def manual_entry_form():
     with st.container():
@@ -699,5 +703,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
