@@ -1,266 +1,696 @@
-import re
+import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
+import plotly.graph_objects as go
+import plotly.express as px
+from supabase_client import *
+from transformers import pipeline
 import json
+import re
+import io
+from datetime import date
+import base64
 
-def format_date(date_string):
-    """Format date string to a readable format"""
+# Set page configuration
+st.set_page_config(
+    page_title="Meeting Manager",
+    page_icon="🎯",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# Custom CSS for modern UI with glassmorphism effect
+st.markdown("""
+<style>
+    /* Global styles */
+    .stApp {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    /* Hide streamlit menu and footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Custom card styling */
+    .meeting-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 10px 0;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .meeting-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5);
+    }
+
+    .card-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 10px;
+    }
+
+    .card-subtitle {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 5px;
+    }
+
+    .card-content {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 5px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        border-radius: 8px;
+        color: white;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+    }
+
+    /* Button styling */
+    .stButton > button {
+        background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-weight: 600;
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    /* Input styling */
+    .stTextInput > div > div > input {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        color: white;
+    }
+
+    .stSelectbox > div > div > select {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        color: white;
+    }
+
+    /* Metric card styling */
+    .metric-card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(15px);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+
+    .metric-title {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 5px;
+    }
+
+    .metric-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: white;
+    }
+
+    /* Progress bar styling */
+    .stProgress > div > div > div > div {
+        background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Initialize session state
+if 'selected_meeting' not in st.session_state:
+    st.session_state.selected_meeting = None
+if 'show_popup' not in st.session_state:
+    st.session_state.show_popup = False
+if 'edit_mode' not in st.session_state:
+    st.session_state.edit_mode = False
+if 'summarizer' not in st.session_state:
     try:
-        date_obj = pd.to_datetime(date_string)
-        return date_obj.strftime('%Y-%m-%d %H:%M')
-    except:
-        return date_string
+        st.session_state.summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+    except Exception as e:
+        st.error(f"Error loading summarization model: {e}")
+        st.session_state.summarizer = None
 
-def truncate_text(text, max_length=50):
-    """Truncate text to specified length"""
-    if not text:
-        return ""
-    if len(text) <= max_length:
-        return text
-    return text[:max_length] + "..."
+# Helper functions
+def extract_key_points(text, num_points=5):
+    """Extract key points from text using simple sentence extraction"""
+    sentences = re.split(r'[.!?]+', text)
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
 
-def extract_keywords(text, num_keywords=5):
-    """Extract keywords from text using simple word frequency"""
-    if not text:
-        return []
+    # Sort by length and take top sentences as key points
+    key_sentences = sorted(sentences, key=len, reverse=True)[:num_points]
+    return key_sentences
 
-    # Simple keyword extraction
-    words = re.findall(r'\b\w+\b', text.lower())
-    word_freq = {}
+def extract_followup_points(text):
+    """Extract potential followup points from text"""
+    followup_keywords = ['follow up', 'next steps', 'action items', 'todo', 'will discuss', 'next meeting', 'review']
+    followup_points = []
 
-    # Common words to ignore
-    stop_words = {'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'a', 'an', 'this', 'that', 'these', 'those'}
+    sentences = re.split(r'[.!?]+', text.lower())
+    for sentence in sentences:
+        if any(keyword in sentence for keyword in followup_keywords):
+            followup_points.append(sentence.strip().capitalize())
 
-    for word in words:
-        if len(word) > 3 and word not in stop_words:
-            word_freq[word] = word_freq.get(word, 0) + 1
+    return followup_points[:3] if followup_points else ["Review meeting outcomes", "Schedule follow-up discussion"]
 
-    # Sort by frequency and return top keywords
-    sorted_keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
-    return [keyword for keyword, freq in sorted_keywords[:num_keywords]]
+def extract_next_meeting_schedule(text):
+    """Extract potential next meeting schedule from text"""
+    # Simple date/time extraction - this could be enhanced with NLP
+    date_patterns = [
+        r'next (monday|tuesday|wednesday|thursday|friday|saturday|sunday)',
+        r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday) next week',
+        r'in (\d+) days?',
+        r'next month',
+        r'next week'
+    ]
 
-def validate_email(email):
-    """Validate email format"""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
+    text_lower = text.lower()
+    for pattern in date_patterns:
+        if re.search(pattern, text_lower):
+            return (datetime.now() + timedelta(days=7)).isoformat()
 
-def calculate_reading_time(text):
-    """Calculate estimated reading time for text"""
-    if not text:
-        return 0
+    return None
 
-    # Average reading speed: 200 words per minute
-    word_count = len(text.split())
-    reading_time = word_count / 200
-    return max(1, round(reading_time))
+def process_transcript_for_meeting(transcript_data):
+    """Process transcript data to extract meeting information"""
+    if not transcript_data or not transcript_data.get('transcript_text'):
+        return None
 
-def format_file_size(size_bytes):
-    """Format file size in human readable format"""
-    if size_bytes == 0:
-        return "0 B"
+    transcript_text = transcript_data['transcript_text']
 
-    size_names = ["B", "KB", "MB", "GB", "TB"]
-    i = 0
-    while size_bytes >= 1024 and i < len(size_names) - 1:
-        size_bytes /= 1024.0
-        i += 1
+    # Generate summary
+    summary = ""
+    if st.session_state.summarizer and len(transcript_text) > 100:
+        try:
+            summary_result = st.session_state.summarizer(transcript_text, max_length=150, min_length=50, do_sample=False)
+            summary = summary_result[0]['summary_text']
+        except Exception as e:
+            summary = transcript_text[:200] + "..." if len(transcript_text) > 200 else transcript_text
+    else:
+        summary = transcript_text[:200] + "..." if len(transcript_text) > 200 else transcript_text
 
-    return f"{size_bytes:.1f} {size_names[i]}"
+    # Extract key points
+    key_points = extract_key_points(transcript_text)
 
-def get_date_range_options():
-    """Get predefined date range options"""
-    today = datetime.now().date()
+    # Extract followup points
+    followup_points = extract_followup_points(transcript_text)
+
+    # Extract next meeting schedule
+    next_schedule = extract_next_meeting_schedule(transcript_text)
 
     return {
-        "Today": (today, today),
-        "Yesterday": (today - timedelta(days=1), today - timedelta(days=1)),
-        "This Week": (today - timedelta(days=today.weekday()), today),
-        "Last Week": (
-            today - timedelta(days=today.weekday() + 7),
-            today - timedelta(days=today.weekday() + 1)
-        ),
-        "This Month": (today.replace(day=1), today),
-        "Last Month": get_last_month_range(today),
-        "Last 30 Days": (today - timedelta(days=30), today),
-        "Last 90 Days": (today - timedelta(days=90), today)
+        'title': transcript_data.get('meeting_title', 'Untitled Meeting'),
+        'summary': summary,
+        'key_points': key_points,
+        'followup_points': followup_points,
+        'next_meet_schedule': next_schedule,
+        'transcript_id': transcript_data['id']
     }
 
-def get_last_month_range(current_date):
-    """Get first and last day of previous month"""
-    if current_date.month == 1:
-        last_month_year = current_date.year - 1
-        last_month = 12
-    else:
-        last_month_year = current_date.year
-        last_month = current_date.month - 1
+def create_meeting_card(meeting, index):
+    """Create a meeting card component"""
+    # Determine source
+    source = "Automatic" if meeting.get('transcript_id') else "Manual"
 
-    first_day = current_date.replace(year=last_month_year, month=last_month, day=1)
+    # Format dates
+    created_date = pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')
+    updated_date = pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')
 
-    # Get last day of the month
-    if last_month == 12:
-        next_month_first = current_date.replace(year=last_month_year + 1, month=1, day=1)
-    else:
-        next_month_first = current_date.replace(year=last_month_year, month=last_month + 1, day=1)
+    # Key points preview (first 2 points)
+    key_points_preview = ""
+    if meeting.get('key_points'):
+        preview_points = meeting['key_points'][:2]
+        key_points_preview = " • ".join([point[:50] + "..." if len(point) > 50 else point for point in preview_points])
+        if len(meeting['key_points']) > 2:
+            key_points_preview += f" • +{len(meeting['key_points']) - 2} more"
 
-    last_day = next_month_first - timedelta(days=1)
+    # Create clickable card HTML
+    card_html = f"""
+    <div class="meeting-card" id="meeting-{index}">
+        <div class="card-title">{meeting.get('title', 'Untitled Meeting')}</div>
+        <div class="card-subtitle">Source: {source} | Created: {created_date}</div>
+        <div class="card-subtitle">Updated: {updated_date}</div>
+        {f'<div class="card-content">Key Points: {key_points_preview}</div>' if key_points_preview else ''}
+    </div>
+    """
 
-    return (first_day, last_day)
+    return card_html
 
-def sanitize_filename(filename):
-    """Sanitize filename for safe file operations"""
-    # Remove or replace invalid characters
-    invalid_chars = '<>:"/\\|?*'
-    for char in invalid_chars:
-        filename = filename.replace(char, '_')
+def show_meeting_popup(meeting):
+    """Show meeting details in a popup"""
+    st.markdown("### 📋 Meeting Details")
 
-    # Truncate if too long
-    if len(filename) > 100:
-        filename = filename[:100]
+    col1, col2 = st.columns([3, 1])
 
-    return filename.strip()
+    with col2:
+        if st.button("✏️ Edit", key="edit_btn"):
+            st.session_state.edit_mode = True
+        if st.button("❌ Close", key="close_btn"):
+            st.session_state.show_popup = False
+            st.session_state.edit_mode = False
+            st.rerun()
 
-def parse_meeting_data(raw_data):
-    """Parse and validate meeting data"""
-    parsed_data = {}
+    with col1:
+        if st.session_state.edit_mode:
+            # Edit mode
+            title = st.text_input("Meeting Title", value=meeting.get('title', ''))
+            summary = st.text_area("Summary", value=meeting.get('summary', ''), height=100)
 
-    # Required fields
-    parsed_data['title'] = raw_data.get('title', '').strip()
-    parsed_data['summary'] = raw_data.get('summary', '').strip()
-
-    # Array fields
-    key_points = raw_data.get('key_points', [])
-    if isinstance(key_points, str):
-        key_points = [key_points]
-    parsed_data['key_points'] = [point.strip() for point in key_points if point.strip()]
-
-    followup_points = raw_data.get('followup_points', [])
-    if isinstance(followup_points, str):
-        followup_points = [followup_points]
-    parsed_data['followup_points'] = [point.strip() for point in followup_points if point.strip()]
-
-    # Optional fields
-    parsed_data['next_meet_schedule'] = raw_data.get('next_meet_schedule')
-    parsed_data['transcript_id'] = raw_data.get('transcript_id')
-
-    return parsed_data
-
-def validate_meeting_data(meeting_data):
-    """Validate meeting data before saving"""
-    errors = []
-
-    if not meeting_data.get('title'):
-        errors.append("Meeting title is required")
-
-    if not meeting_data.get('summary'):
-        errors.append("Meeting summary is required")
-
-    if len(meeting_data.get('title', '')) > 200:
-        errors.append("Meeting title is too long (max 200 characters)")
-
-    if len(meeting_data.get('summary', '')) > 5000:
-        errors.append("Meeting summary is too long (max 5000 characters)")
-
-    return errors
-
-def generate_export_filename(start_date, end_date, file_type="csv"):
-    """Generate filename for data export"""
-    start_str = start_date.strftime('%Y%m%d') if isinstance(start_date, datetime) else str(start_date).replace('-', '')
-    end_str = end_date.strftime('%Y%m%d') if isinstance(end_date, datetime) else str(end_date).replace('-', '')
-
-    timestamp = datetime.now().strftime('%H%M%S')
-    filename = f"meetings_export_{start_str}_to_{end_str}_{timestamp}.{file_type}"
-
-    return sanitize_filename(filename)
-
-class MeetingSearchFilter:
-    """Class to handle meeting search and filtering"""
-
-    @staticmethod
-    def search_meetings(meetings, query):
-        """Search meetings by title, summary, and key points"""
-        if not query:
-            return meetings
-
-        query = query.lower()
-        filtered = []
-
-        for meeting in meetings:
-            # Search in title
-            if query in meeting.get('title', '').lower():
-                filtered.append(meeting)
-                continue
-
-            # Search in summary
-            if query in meeting.get('summary', '').lower():
-                filtered.append(meeting)
-                continue
-
-            # Search in key points
+            # Key points editing
+            st.write("**Key Points:**")
             key_points = meeting.get('key_points', [])
-            if any(query in point.lower() for point in key_points):
-                filtered.append(meeting)
-                continue
+            updated_key_points = []
 
-            # Search in followup points
+            for i, point in enumerate(key_points):
+                point_value = st.text_input(f"Key Point {i+1}", value=point, key=f"key_point_{i}")
+                if point_value.strip():
+                    updated_key_points.append(point_value)
+
+            # Add new key point
+            new_key_point = st.text_input("Add New Key Point", key="new_key_point")
+            if new_key_point.strip():
+                updated_key_points.append(new_key_point)
+
+            # Followup points editing
+            st.write("**Follow-up Points:**")
             followup_points = meeting.get('followup_points', [])
-            if any(query in point.lower() for point in followup_points):
-                filtered.append(meeting)
-                continue
+            updated_followup_points = []
 
-        return filtered
+            for i, point in enumerate(followup_points):
+                point_value = st.text_input(f"Follow-up Point {i+1}", value=point, key=f"followup_point_{i}")
+                if point_value.strip():
+                    updated_followup_points.append(point_value)
 
-    @staticmethod
-    def filter_by_date(meetings, start_date, end_date):
-        """Filter meetings by date range"""
-        if not start_date or not end_date:
-            return meetings
+            # Add new followup point
+            new_followup_point = st.text_input("Add New Follow-up Point", key="new_followup_point")
+            if new_followup_point.strip():
+                updated_followup_points.append(new_followup_point)
 
-        filtered = []
-        for meeting in meetings:
-            meeting_date = pd.to_datetime(meeting['created_at']).date()
-            if start_date <= meeting_date <= end_date:
-                filtered.append(meeting)
+            # Next meeting schedule
+            next_schedule = st.date_input("Next Meeting Schedule", 
+                                        value=pd.to_datetime(meeting.get('next_meet_schedule')).date() if meeting.get('next_meet_schedule') else None)
 
-        return filtered
+            # Save button
+            if st.button("💾 Save Changes", key="save_changes"):
+                next_schedule_str = next_schedule.isoformat() if next_schedule else None
+                success = update_meeting(
+                    meeting['id'], 
+                    title, 
+                    summary, 
+                    updated_key_points, 
+                    updated_followup_points,
+                    next_schedule_str
+                )
+                if success:
+                    st.success("Meeting updated successfully!")
+                    st.session_state.edit_mode = False
+                    st.rerun()
+                else:
+                    st.error("Error updating meeting")
 
-    @staticmethod
-    def filter_by_source(meetings, source_type):
-        """Filter meetings by source type (manual/automatic)"""
-        if not source_type or source_type.lower() == 'all':
-            return meetings
+        else:
+            # View mode
+            source = "Automatic" if meeting.get('transcript_id') else "Manual"
+            created_date = pd.to_datetime(meeting['created_at']).strftime('%Y-%m-%d %H:%M')
+            updated_date = pd.to_datetime(meeting['updated_at']).strftime('%Y-%m-%d %H:%M')
 
-        filtered = []
-        for meeting in meetings:
-            has_transcript = bool(meeting.get('transcript_id'))
-            meeting_source = 'automatic' if has_transcript else 'manual'
+            st.markdown(f"**Title:** {meeting.get('title', 'N/A')}")
+            st.markdown(f"**Source:** {source}")
+            st.markdown(f"**Created:** {created_date}")
+            st.markdown(f"**Updated:** {updated_date}")
 
-            if source_type.lower() == meeting_source:
-                filtered.append(meeting)
+            st.markdown("**Summary:**")
+            st.write(meeting.get('summary', 'No summary available'))
 
-        return filtered
+            st.markdown("**Key Points:**")
+            key_points = meeting.get('key_points', [])
+            if key_points:
+                for i, point in enumerate(key_points, 1):
+                    st.write(f"{i}. {point}")
+            else:
+                st.write("No key points available")
 
-def create_meeting_summary_stats(meetings):
-    """Create summary statistics for meetings"""
+            st.markdown("**Follow-up Points:**")
+            followup_points = meeting.get('followup_points', [])
+            if followup_points:
+                for i, point in enumerate(followup_points, 1):
+                    st.write(f"{i}. {point}")
+            else:
+                st.write("No follow-up points available")
+
+            if meeting.get('next_meet_schedule'):
+                next_date = pd.to_datetime(meeting['next_meet_schedule']).strftime('%Y-%m-%d')
+                st.markdown(f"**Next Meeting:** {next_date}")
+
+def manual_entry_form():
+    """Show manual entry form"""
+    st.markdown("### ✏️ Manual Meeting Entry")
+
+    with st.form("manual_entry_form"):
+        title = st.text_input("Meeting Title*", placeholder="Enter meeting title")
+        summary = st.text_area("Meeting Summary*", placeholder="Enter meeting summary", height=100)
+
+        st.write("**Key Points:**")
+        key_point_1 = st.text_input("Key Point 1", placeholder="First key point")
+        key_point_2 = st.text_input("Key Point 2", placeholder="Second key point")
+        key_point_3 = st.text_input("Key Point 3", placeholder="Third key point")
+
+        st.write("**Follow-up Points:**")
+        followup_1 = st.text_input("Follow-up Point 1", placeholder="First follow-up point")
+        followup_2 = st.text_input("Follow-up Point 2", placeholder="Second follow-up point")
+
+        next_meeting_date = st.date_input("Next Meeting Date (Optional)")
+
+        submitted = st.form_submit_button("💾 Save Meeting")
+
+        if submitted:
+            if title and summary:
+                # Prepare data
+                key_points = [point for point in [key_point_1, key_point_2, key_point_3] if point.strip()]
+                followup_points = [point for point in [followup_1, followup_2] if point.strip()]
+                next_schedule = next_meeting_date.isoformat() if next_meeting_date else None
+
+                # Save to database
+                success = create_new_meeting(title, summary, key_points, followup_points, next_schedule)
+
+                if success:
+                    st.success("Meeting saved successfully!")
+                    st.rerun()
+                else:
+                    st.error("Error saving meeting. Please try again.")
+            else:
+                st.error("Please fill in the required fields (Title and Summary)")
+
+def meeting_details_tab():
+    """Meeting Details Tab Content"""
+    st.markdown("## 📋 Meeting Details")
+
+    # Search and filter section
+    col1, col2, col3 = st.columns([2, 1, 1])
+
+    with col1:
+        search_query = st.text_input("🔍 Search meetings", placeholder="Search by title or content...")
+
+    with col2:
+        date_filter = st.selectbox("📅 Filter by Date", ["All", "Today", "This Week", "This Month", "Custom Range"])
+
+    with col3:
+        if st.button("➕ Manual Entry", key="manual_entry_btn"):
+            st.session_state.show_manual_entry = True
+
+    # Handle date filtering
+    start_date = None
+    end_date = None
+
+    if date_filter == "Today":
+        start_date = datetime.now().date()
+        end_date = start_date
+    elif date_filter == "This Week":
+        today = datetime.now().date()
+        start_date = today - timedelta(days=today.weekday())
+        end_date = start_date + timedelta(days=6)
+    elif date_filter == "This Month":
+        today = datetime.now().date()
+        start_date = today.replace(day=1)
+        # Get last day of month
+        if today.month == 12:
+            end_date = today.replace(year=today.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            end_date = today.replace(month=today.month + 1, day=1) - timedelta(days=1)
+    elif date_filter == "Custom Range":
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input("Start Date")
+        with col2:
+            end_date = st.date_input("End Date")
+
+    # Show manual entry form if requested
+    if st.session_state.get('show_manual_entry', False):
+        manual_entry_form()
+        if st.button("❌ Cancel", key="cancel_manual_entry"):
+            st.session_state.show_manual_entry = False
+            st.rerun()
+        return
+
+    # Fetch meetings
+    meetings = fetch_meetings()
+
     if not meetings:
-        return {}
+        st.info("No meetings found. Use the Manual Entry button to add your first meeting.")
+        return
 
-    total_meetings = len(meetings)
-    manual_meetings = sum(1 for m in meetings if not m.get('transcript_id'))
-    automatic_meetings = total_meetings - manual_meetings
+    # Process any unprocessed transcripts
+    for meeting in meetings:
+        if meeting.get('transcript_id') and not meeting.get('summary'):
+            # This meeting has a transcript but no processed summary
+            transcript = fetch_transcript_by_id(meeting['transcript_id'])
+            if transcript:
+                processed_data = process_transcript_for_meeting(transcript)
+                if processed_data:
+                    # Update the meeting with processed data
+                    update_meeting(
+                        meeting['id'],
+                        processed_data['title'],
+                        processed_data['summary'],
+                        processed_data['key_points'],
+                        processed_data['followup_points'],
+                        processed_data['next_meet_schedule']
+                    )
 
-    # Date range
-    dates = [pd.to_datetime(m['created_at']).date() for m in meetings]
-    earliest_date = min(dates)
-    latest_date = max(dates)
+    # Re-fetch meetings after processing
+    meetings = fetch_meetings()
 
-    # Average key points
-    total_key_points = sum(len(m.get('key_points', [])) for m in meetings)
-    avg_key_points = total_key_points / total_meetings if total_meetings > 0 else 0
+    # Filter meetings based on search query and date
+    filtered_meetings = meetings
 
-    return {
-        'total_meetings': total_meetings,
-        'manual_meetings': manual_meetings,
-        'automatic_meetings': automatic_meetings,
-        'date_range': f"{earliest_date} to {latest_date}",
-        'average_key_points': round(avg_key_points, 1)
-    }
+    if search_query:
+        filtered_meetings = [
+            m for m in filtered_meetings 
+            if search_query.lower() in m.get('title', '').lower() or 
+               search_query.lower() in m.get('summary', '').lower()
+        ]
+
+    if start_date and end_date:
+        filtered_meetings = [
+            m for m in filtered_meetings
+            if start_date <= pd.to_datetime(m['created_at']).date() <= end_date
+        ]
+
+    # Display meetings
+    if not filtered_meetings:
+        st.info("No meetings match your search criteria.")
+        return
+
+    st.markdown(f"### Found {len(filtered_meetings)} meeting(s)")
+
+    # Display meeting cards
+    for index, meeting in enumerate(filtered_meetings):
+        card_html = create_meeting_card(meeting, index)
+        st.markdown(card_html, unsafe_allow_html=True)
+
+        # Add click handler using button
+        if st.button(f"View Details", key=f"view_meeting_{index}"):
+            st.session_state.selected_meeting = meeting
+            st.session_state.show_popup = True
+            st.session_state.edit_mode = False
+
+    # Show popup if meeting is selected
+    if st.session_state.show_popup and st.session_state.selected_meeting:
+        with st.container():
+            show_meeting_popup(st.session_state.selected_meeting)
+
+def space_management_tab():
+    """Space Management Tab Content"""
+    st.markdown("## 💾 Space Management")
+
+    # Get database statistics
+    stats = get_database_stats()
+
+    # Storage overview
+    st.markdown("### 📊 Storage Overview")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-title">Total Meetings</div>
+            <div class="metric-value">{stats['meetings_count']}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-title">Total Transcripts</div>
+            <div class="metric-value">{stats['transcripts_count']}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        storage_percentage = min((stats['total_size_mb'] / 1024) * 100, 100)  # Convert to GB and get percentage of 1GB
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-title">Storage Used</div>
+            <div class="metric-value">{stats['total_size_mb']:.1f} MB</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        remaining_storage = max(1024 - stats['total_size_mb'], 0)
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-title">Available Space</div>
+            <div class="metric-value">{remaining_storage:.1f} MB</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Storage progress bar
+    st.markdown("### 📈 Storage Usage")
+    progress_value = min(stats['total_size_mb'] / 1024, 1.0)  # Convert to GB ratio
+    st.progress(progress_value)
+    st.markdown(f"**{stats['total_size_mb']:.1f} MB of 1024 MB used ({progress_value*100:.1f}%)**")
+
+    # Warning if storage is getting full
+    if progress_value > 0.8:
+        st.warning("⚠️ Storage is getting full! Consider deleting old records to free up space.")
+    elif progress_value > 0.9:
+        st.error("🚨 Storage is critically full! Please delete some records immediately.")
+
+    # Storage breakdown chart
+    st.markdown("### 📊 Storage Breakdown")
+
+    fig = go.Figure(data=[
+        go.Bar(name='Meetings', x=['Storage'], y=[stats['meetings_size_mb']]),
+        go.Bar(name='Transcripts', x=['Storage'], y=[stats['transcripts_size_mb']])
+    ])
+    fig.update_layout(
+        barmode='stack',
+        title="Storage Usage by Data Type",
+        yaxis_title="Size (MB)",
+        template="plotly_dark"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Data management section
+    st.markdown("### 🗂️ Data Management")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("#### 🗑️ Delete Old Records")
+
+        # Date picker for deletion
+        cutoff_date = st.date_input(
+            "Delete records older than:",
+            value=datetime.now().date() - timedelta(days=30)
+        )
+
+        if st.button("🗑️ Delete Old Records", key="delete_old_records"):
+            if st.checkbox("I understand this action cannot be undone", key="confirm_delete"):
+                deleted_count = delete_old_records(cutoff_date.isoformat())
+                if deleted_count > 0:
+                    st.success(f"Deleted {deleted_count} old records successfully!")
+                    st.rerun()
+                else:
+                    st.info("No records found matching the criteria.")
+
+    with col2:
+        st.markdown("#### 📥 Export Data")
+
+        # Date range for export
+        export_start_date = st.date_input("Export from:", value=datetime.now().date() - timedelta(days=30))
+        export_end_date = st.date_input("Export to:", value=datetime.now().date())
+
+        if st.button("📥 Export to Excel", key="export_data"):
+            csv_data = export_meetings_csv(
+                export_start_date.isoformat(),
+                export_end_date.isoformat()
+            )
+
+            if csv_data:
+                # Convert CSV to Excel-like format for download
+                st.download_button(
+                    label="💾 Download Excel File",
+                    data=csv_data,
+                    file_name=f"meetings_export_{export_start_date}_to_{export_end_date}.csv",
+                    mime="text/csv",
+                    key="download_csv"
+                )
+                st.success("Data exported successfully! Click the download button above.")
+            else:
+                st.info("No data found for the selected date range.")
+
+    # Recent activity
+    st.markdown("### 📈 Recent Activity")
+
+    meetings = fetch_meetings()
+    if meetings:
+        # Create activity timeline
+        recent_meetings = meetings[:10]  # Last 10 meetings
+
+        activity_data = []
+        for meeting in recent_meetings:
+            activity_data.append({
+                'Date': pd.to_datetime(meeting['created_at']).date(),
+                'Title': meeting.get('title', 'Untitled'),
+                'Source': 'Automatic' if meeting.get('transcript_id') else 'Manual',
+                'Size (est.)': f"{len(str(meeting.get('summary', ''))) + len(str(meeting.get('key_points', [])))} chars"
+            })
+
+        df = pd.DataFrame(activity_data)
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("No recent activity to display.")
+
+# Main app
+def main():
+    st.title("🎯 Meeting Manager")
+
+    # Create tabs
+    tab1, tab2 = st.tabs(["📋 Meeting Details", "💾 Space Management"])
+
+    with tab1:
+        meeting_details_tab()
+
+    with tab2:
+        space_management_tab()
+
+if __name__ == "__main__":
+    main()
