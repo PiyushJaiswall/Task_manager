@@ -1,0 +1,7 @@
+# Packages file for Streamlit Cloud deployment
+# This file tells Streamlit Cloud which system packages to install
+
+build-essential
+python3-dev
+libffi-dev
+libssl-dev
